@@ -810,7 +810,7 @@ const val=id=>document.getElementById(id).value.trim();
 let curEng=null;
 async function renderWorkflow(){
   const el=document.getElementById('page-workflow');
-  el.innerHTML=`<div class="page-head"><div><h2>Audit Workflow</h2><p>9-stage engagement engine · role-gated transitions</p></div></div>
+  el.innerHTML=`<div class="page-head"><div><h2>Audit Workflow</h2><p>9-stage engagement engine · role-gated transitions</p></div><button class="btn primary" onclick="newEngagement()">+ New engagement</button></div>
     <div class="grid" style="grid-template-columns:300px 1fr;gap:16px;align-items:start">
       <div class="card" id="engList">Loading…</div><div id="engDetail" class="card pad" style="color:var(--muted)">Select an engagement…</div></div>`;
   try{
@@ -821,6 +821,27 @@ async function renderWorkflow(){
       ||'<div class="pad" style="color:var(--muted)">No engagements</div>';
     if(data[0]) openEng(data[0].id);
   }catch(e){ document.getElementById('engList').innerHTML=`<div class="pad" style="color:var(--red)">${esc(e.message)}</div>`; }
+}
+async function newEngagement(){
+  let clients=[]; try{ clients=(await api('/clients')).data; }catch(e){ toast(e.message); return; }
+  if(!clients.length){ toast('Add a client first.'); return; }
+  const el=document.getElementById('engDetail'); el.style.color='';
+  const yr=new Date().getFullYear();
+  el.innerHTML=`<h3 style="font-size:16px;font-weight:700;margin-bottom:12px">New audit engagement</h3>
+    <div class="field"><label>Client *</label><select id="ne_client">${clients.map(c=>`<option value="${c.id}">${esc(c.name)} (${esc(c.category)})</option>`).join('')}</select></div>
+    <div class="g2"><div class="field"><label>Type</label><select id="ne_type"><option>Audit</option><option>Tax</option><option>Accounting</option><option>Consultancy</option></select></div>
+      <div class="field"><label>Financial year</label><input id="ne_year" type="number" value="${yr}"></div></div>
+    <div class="g2"><div class="field"><label>Period start</label><input id="ne_start" type="date" value="${yr}-01-01"></div>
+      <div class="field"><label>Period end</label><input id="ne_end" type="date" value="${yr}-12-31"></div></div>
+    <div class="field"><label>Fee (TZS, optional)</label><input id="ne_fee" type="number" step="0.01"></div>
+    <div style="display:flex;gap:10px;margin-top:8px"><button class="btn primary" onclick="createEngagement()">Create engagement</button><button class="btn" onclick="renderWorkflow()">Cancel</button></div>`;
+}
+async function createEngagement(){
+  const body={ client_id:val('ne_client'), type:val('ne_type')||'Audit', financial_year:Number(val('ne_year'))||null,
+    period_start:val('ne_start')||null, period_end:val('ne_end')||null, fee_amount:val('ne_fee')?Number(val('ne_fee')):null };
+  if(!body.client_id){ toast('Choose a client'); return; }
+  try{ const {data}=await api('/engagements',{method:'POST',body:JSON.stringify(body)}); toast('Engagement created'); await renderWorkflow(); openEng(data.id); }
+  catch(e){ toast(e.message); }
 }
 async function openEng(id){
   curEng=id;
