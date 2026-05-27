@@ -184,6 +184,7 @@
   <div class="modal" style="max-width:720px;width:100%">
     <div class="modal-head"><h3 id="cd_title" style="font-size:16px;font-weight:700">Client</h3><button class="btn" onclick="closeClientDetail()">✕</button></div>
     <div class="pad" id="cd_info"></div>
+    <div class="pad" id="cd_team" style="padding-top:0"></div>
     <div class="pad" style="padding-top:0">
       <div id="cd_tabs" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"></div>
       <div id="cd_comments" style="max-height:320px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:6px"></div>
@@ -775,7 +776,7 @@ async function viewClient(id){
       <span><b style="color:var(--text)">Status:</b> ${esc(c.status||'—')}</span></div>`;
     document.getElementById('cd_tabs').innerHTML=['general','audit','tax','accounting'].map(a=>`<span class="pill ${a===CD.area?'active':''}" data-a="${a}" onclick="cdGo('${a}')">${a[0].toUpperCase()+a.slice(1)}</span>`).join('');
     document.getElementById('clientDetail').classList.add('open');
-    cdLoad();
+    cdLoad(); cdLoadTeam();
   }catch(e){ toast(e.message); }
 }
 function closeClientDetail(){ document.getElementById('clientDetail').classList.remove('open'); }
@@ -796,6 +797,29 @@ async function cdPost(){
 }
 async function cdEdit(id,ev){ ev.preventDefault(); const cur=document.getElementById('cm_'+id).textContent; const nv=prompt('Edit note:',cur); if(nv==null||!nv.trim())return; try{ await api('/comments/'+id,{method:'PATCH',body:JSON.stringify({body:nv.trim()})}); cdLoad(); }catch(e){ toast(e.message); } }
 async function cdDel(id,ev){ ev.preventDefault(); if(!confirm('Delete this note?'))return; try{ await api('/comments/'+id,{method:'DELETE'}); cdLoad(); }catch(e){ toast(e.message); } }
+async function cdLoadTeam(){
+  const el=document.getElementById('cd_team'); if(!el)return;
+  const canManage=USER&&['Admin','Partner','Manager'].includes(USER.role);
+  try{
+    const {data}=await api('/clients/'+CD.client.id+'/team');
+    let html=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><b>Assigned team</b>${canManage?'<a href="#" onclick="cdAssignForm(event)" style="font-size:12px">+ Assign staff</a>':''}</div>`;
+    html+=data.length?data.map(m=>`<div class="row-item"><div style="flex:1"><b>${esc(m.full_name)}</b> <span class="chip c-grey">${esc(m.role)}</span><div style="color:var(--muted);font-size:11.5px">${esc(m.email||'')}${m.phone?' · '+esc(m.phone):''} · ${esc(m.access_level)}</div></div>${canManage?`<a href="#" onclick="cdUnassign('${m.id}',event)" style="color:var(--red);font-size:12px">remove</a>`:''}</div>`).join(''):'<div style="color:var(--muted);font-size:12.5px">No staff assigned yet.</div>';
+    html+=`<div id="cd_assignBox"></div>`;
+    el.innerHTML=html;
+  }catch(e){ el.innerHTML=`<span style="color:var(--red)">${esc(e.message)}</span>`; }
+}
+async function cdAssignForm(ev){ if(ev)ev.preventDefault();
+  let staff=[]; try{ staff=(await api('/clients/staff-options')).data; }catch(e){ toast(e.message); return; }
+  document.getElementById('cd_assignBox').innerHTML=`<div style="display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap">
+    <select id="cd_staff" class="btn">${staff.map(s=>`<option value="${s.id}">${esc(s.full_name)} — ${esc(s.role)}</option>`).join('')}</select>
+    <select id="cd_lvl" class="btn"><option value="editor">Editor</option><option value="owner">Owner / lead</option><option value="viewer">Viewer</option></select>
+    <button class="btn primary" onclick="cdAssign()">Add</button></div>`;
+}
+async function cdAssign(){
+  const user_id=document.getElementById('cd_staff').value, access_level=document.getElementById('cd_lvl').value;
+  try{ await api('/clients/'+CD.client.id+'/team',{method:'POST',body:JSON.stringify({user_id,access_level})}); toast('Staff assigned'); cdLoadTeam(); }catch(e){ toast(e.message); }
+}
+async function cdUnassign(userId,ev){ if(ev)ev.preventDefault(); try{ await api('/clients/'+CD.client.id+'/team/'+userId,{method:'DELETE'}); toast('Removed'); cdLoadTeam(); }catch(e){ toast(e.message); } }
 function openModal(){document.getElementById('clientModal').classList.add('open');}
 function closeModal(){document.getElementById('clientModal').classList.remove('open');}
 async function saveClient(){

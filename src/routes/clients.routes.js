@@ -38,6 +38,14 @@ router.get('/deleted', requirePermission('client.delete'), asyncHandler(async (r
   res.json({ data: rows });
 }));
 
+// Staff options for team-assignment dropdowns (firm staff, excluding clients).
+router.get('/staff-options', requirePermission('client.update'), asyncHandler(async (req, res) => {
+  const rows = await q(
+    "SELECT id, full_name, role FROM users WHERE firm_id=? AND deleted_at IS NULL AND status='active' AND role <> 'Client' ORDER BY full_name",
+    [req.user.firmId]);
+  res.json({ data: rows });
+}));
+
 // Single client + contacts
 router.get('/:id', requirePermission('client.read'), asyncHandler(async (req, res) => {
   if (!(await canAccessClient(req.user, req.params.id))) return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'No access to this client' } });
@@ -111,6 +119,35 @@ router.get('/:id/documents', requirePermission('client.read'), asyncHandler(asyn
 router.get('/:id/obligations', requirePermission('client.read'), asyncHandler(async (req, res) => {
   if (!(await canAccessClient(req.user, req.params.id))) return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'No access' } });
   res.json({ data: await q('SELECT * FROM statutory_deadlines WHERE client_id=? ORDER BY due_date', [req.params.id]) });
+}));
+
+// ---- Client team (assigned staff) ----
+router.get('/:id/team', requirePermission('client.read'), asyncHandler(async (req, res) => {
+  if (!(await canAccessClient(req.user, req.params.id))) return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'No access' } });
+  const rows = await q(
+    `SELECT u.id, u.full_name, u.role, u.email, u.phone, u.status, a.access_level
+       FROM user_client_access a JOIN users u ON u.id=a.user_id
+      WHERE a.client_id=? AND u.deleted_at IS NULL ORDER BY u.full_name`, [req.params.id]);
+  res.json({ data: rows });
+}));
+
+router.post('/:id/team', requirePermission('client.update'), asyncHandler(async (req, res) => {
+  if (!(await canAccessClient(req.user, req.params.id))) return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'No access' } });
+  const b = req.body || {};
+  if (!b.user_id) return res.status(400).json({ error: { code: 'BAD_INPUT', message: 'user_id is required' } });
+  const lvl = ['owner', 'editor', 'viewer'].includes(b.access_level) ? b.access_level : 'editor';
+  const ex = await one('SELECT id FROM user_client_access WHERE user_id=? AND client_id=?', [b.user_id, req.params.id]);
+  if (ex) await q('UPDATE user_client_access SET access_level=? WHERE id=?', [lvl, ex.id]);
+  else await q('INSERT INTO user_client_access (id, user_id, client_id, access_level) VALUES (?,?,?,?)', [uuid(), b.user_id, req.params.id, lvl]);
+  await logActivity(req, 'assign', 'client', req.params.id, { user_id: b.user_id, access_level: lvl });
+  res.json({ data: { ok: true } });
+}));
+
+router.delete('/:id/team/:userId', requirePermission('client.update'), asyncHandler(async (req, res) => {
+  if (!(await canAccessClient(req.user, req.params.id))) return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'No access' } });
+  await q('DELETE FROM user_client_access WHERE client_id=? AND user_id=?', [req.params.id, req.params.userId]);
+  await logActivity(req, 'unassign', 'client', req.params.id, { user_id: req.params.userId });
+  res.json({ data: { ok: true } });
 }));
 
 module.exports = router;
