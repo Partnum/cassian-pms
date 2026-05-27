@@ -1,0 +1,192 @@
+%% Cassian PMS — Entity Relationship Diagram (PostgreSQL)
+%% Renders in any Mermaid viewer. Core entities show key attributes;
+%% all foreign-key relationships are shown.
+erDiagram
+  FIRMS ||--o{ USERS : employs
+  FIRMS ||--o{ CLIENTS : serves
+  ROLES ||--o{ USERS : grants
+  ROLES ||--o{ ROLE_PERMISSIONS : has
+  PERMISSIONS ||--o{ ROLE_PERMISSIONS : in
+  USERS ||--o{ USER_SESSIONS : owns
+  USERS ||--o{ LOGIN_HISTORY : logs
+  USERS ||--o{ PASSWORD_RESET_TOKENS : requests
+  USERS ||--o{ USER_CLIENT_ACCESS : scoped
+  CLIENTS ||--o{ USER_CLIENT_ACCESS : restricts
+  CLIENTS ||--o{ CLIENT_CONTACTS : has
+  CLIENTS ||--o{ CLIENT_ADDRESSES : has
+  CLIENTS ||--o{ CLIENT_SERVICES : buys
+  CLIENTS ||--o{ CLIENT_DRIVE_LINKS : links
+
+  CLIENTS ||--o{ AUDIT_ENGAGEMENTS : engages
+  AUDIT_ENGAGEMENTS ||--o{ AUDIT_STAGES : has
+  AUDIT_ENGAGEMENTS ||--o{ AUDIT_WORKFLOW_HISTORY : transitions
+  AUDIT_ENGAGEMENTS ||--o{ AUDIT_TASKS : contains
+  AUDIT_ENGAGEMENTS ||--o{ AUDIT_REVIEWS : reviewed_by
+  AUDIT_ENGAGEMENTS ||--o{ AUDIT_COMMENTS : noted
+  AUDIT_ENGAGEMENTS ||--o{ AUDIT_FINDINGS : raises
+  AUDIT_ENGAGEMENTS ||--o{ AUDIT_SIGNOFFS : signed
+
+  CLIENTS ||--o{ DOCUMENTS : owns
+  DOCUMENT_CATEGORIES ||--o{ DOCUMENTS : classifies
+  DOCUMENTS ||--o{ DOCUMENT_VERSIONS : versions
+  DOCUMENTS ||--o{ DOCUMENT_ACCESS_LOGS : audited
+
+  FIRMS ||--o{ TASKS : tracks
+  CLIENTS ||--o{ TASKS : about
+  USERS ||--o{ TASKS : assigned
+  TASKS ||--o{ TASK_COMMENTS : has
+  TASKS ||--o{ TASK_ATTACHMENTS : has
+  FIRMS ||--o{ CALENDAR_EVENTS : schedules
+  FIRMS ||--o{ NOTIFICATIONS : sends
+  USERS ||--o{ NOTIFICATIONS : receives
+
+  CLIENTS ||--o{ CHART_OF_ACCOUNTS : has
+  CLIENTS ||--o{ JOURNAL_ENTRIES : posts
+  JOURNAL_ENTRIES ||--o{ JOURNAL_LINES : has
+  CHART_OF_ACCOUNTS ||--o{ JOURNAL_LINES : posted_to
+  CLIENTS ||--o{ LEDGERS : has
+  CLIENTS ||--o{ TRIAL_BALANCE : has
+  CLIENTS ||--o{ BANK_ACCOUNTS : has
+  BANK_ACCOUNTS ||--o{ BANK_TRANSACTIONS : has
+  BANK_ACCOUNTS ||--o{ BANK_RECONCILIATIONS : reconciled
+
+  CLIENTS ||--o{ STATUTORY_DEADLINES : owes
+  CLIENTS ||--o{ TAX_RETURNS : files
+  TAX_RETURNS ||--o{ TRA_SUBMISSIONS : submitted
+  CLIENTS ||--o{ VAT_RETURNS : files
+  CLIENTS ||--o{ PAYE_RETURNS : files
+  CLIENTS ||--o{ WCF_RETURNS : files
+  CLIENTS ||--o{ NSSF_RETURNS : files
+  CLIENTS ||--o{ PDPC_COMPLIANCE : registers
+  STATUTORY_DEADLINES ||--o{ REMINDERS : triggers
+  TASKS ||--o{ REMINDERS : triggers
+
+  FIRMS ||--o{ AI_LOGS : records
+  FIRMS ||--o{ AI_QUERIES : records
+  AUDIT_ENGAGEMENTS ||--o{ AI_RECOMMENDATIONS : for
+  AUDIT_ENGAGEMENTS ||--o{ AI_RISK_ANALYSIS : for
+  CLIENTS ||--o{ ANOMALY_DETECTION_RESULTS : flags
+
+  FIRMS ||--o{ REPORTS : generates
+  REPORT_TEMPLATES ||--o{ REPORTS : from
+  REPORTS ||--o{ EXPORTED_REPORTS : exported
+  FIRMS ||--o{ ACTIVITY_LOG : audited
+  USERS ||--o{ ACTIVITY_LOG : acts
+  FIRMS ||--o{ APP_SETTINGS : configures
+
+  FIRMS {
+    uuid id PK
+    varchar name
+    varchar tin
+    varchar vrn
+    jsonb settings
+  }
+  USERS {
+    uuid id PK
+    uuid firm_id FK
+    varchar full_name
+    citext email UK
+    varchar password_hash
+    varchar role FK
+    varchar status
+    timestamptz last_login_at
+  }
+  ROLES {
+    uuid id PK
+    varchar name UK
+  }
+  USER_SESSIONS {
+    uuid id PK
+    uuid user_id FK
+    varchar token_hash
+    timestamptz expires_at
+    timestamptz revoked_at
+  }
+  CLIENTS {
+    uuid id PK
+    uuid firm_id FK
+    varchar name "company_name"
+    varchar category
+    varchar tin
+    varchar vrn
+    varchar sector "industry"
+    uuid manager_id FK "assigned_manager"
+    uuid engagement_partner_id FK "assigned_partner"
+    varchar status "engagement_status"
+    varchar drive_folder_id "google_drive_folder_id"
+  }
+  AUDIT_ENGAGEMENTS {
+    uuid id PK
+    uuid client_id FK
+    int financial_year
+    uuid partner_id FK
+    uuid manager_id FK
+    varchar current_stage
+    int progress_pct
+    numeric fee_amount
+  }
+  AUDIT_STAGES {
+    uuid id PK
+    uuid engagement_id FK
+    int sequence
+    varchar name
+    varchar status
+    int progress_pct
+    uuid responsible_user_id FK
+  }
+  DOCUMENTS {
+    uuid id PK
+    uuid client_id FK
+    uuid engagement_id FK
+    varchar drive_file_id
+    varchar storage
+    varchar name
+    varchar doc_type
+    int year
+    bigint size_bytes
+  }
+  STATUTORY_DEADLINES {
+    uuid id PK
+    uuid client_id FK
+    varchar type
+    varchar authority
+    date due_date
+    varchar status
+  }
+  TASKS {
+    uuid id PK
+    uuid client_id FK
+    uuid assignee_id FK
+    varchar title
+    varchar priority
+    varchar status
+    timestamptz due_date
+  }
+  JOURNAL_ENTRIES {
+    uuid id PK
+    uuid client_id FK
+    date entry_date
+    varchar status
+  }
+  JOURNAL_LINES {
+    uuid id PK
+    uuid journal_id FK
+    uuid account_id FK
+    numeric debit
+    numeric credit
+  }
+  AI_LOGS {
+    uuid id PK
+    uuid user_id FK
+    varchar feature
+    text prompt
+    text response
+  }
+  ACTIVITY_LOG {
+    uuid id PK
+    uuid user_id FK
+    varchar action
+    varchar entity_type
+    uuid entity_id
+    jsonb detail
+  }

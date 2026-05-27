@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cassian &amp; Associates — Management System</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{--navy:#1E3A5F;--navy7:#16304f;--gold:#C8A24B;--bg:#f4f6f9;--card:#fff;--text:#1c2733;--muted:#697586;
+    --border:#e2e8f0;--sidebar:#13263f;--green:#2e7d57;--green-bg:#e6f4ec;--amber:#b5800f;--amber-bg:#fdf3df;
+    --red:#b3402f;--red-bg:#fbe9e6;--blue:#2c6fb3;--blue-bg:#e7f0fa;--shadow:0 1px 3px rgba(16,33,56,.08)}
+  body.dark{--bg:#0f1722;--card:#18222f;--text:#e6ebf2;--muted:#8b97a7;--border:#28333f;
+    --green-bg:#15301f;--amber-bg:#33280c;--red-bg:#3a1b16;--blue-bg:#13283f;--shadow:0 1px 3px rgba(0,0,0,.45)}
+  body.dark .topbar,body.dark .search input{background:var(--card);color:var(--text)}
+  body.dark input,body.dark select,body.dark textarea{background:#0f1722;color:var(--text);border-color:var(--border)}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+  a{color:inherit;text-decoration:none}
+  .app{display:flex;min-height:100vh}
+  .sidebar{width:236px;background:var(--sidebar);color:#c5d2e0;position:fixed;inset:0 auto 0 0;display:flex;flex-direction:column;z-index:30}
+  .brand{display:flex;gap:11px;align-items:center;padding:18px 16px;border-bottom:1px solid rgba(255,255,255,.07)}
+  .brand .logo{width:38px;height:38px;border-radius:9px;background:linear-gradient(135deg,var(--gold),#a9842f);color:#13263f;font-weight:800;display:flex;align-items:center;justify-content:center}
+  .brand h1{font-size:14px;color:#fff}.brand p{font-size:10px;color:#C8A24B;text-transform:uppercase;letter-spacing:.6px}
+  nav{flex:1;padding:12px 10px;overflow-y:auto}
+  .nav-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:8px;cursor:pointer;font-weight:500;margin-bottom:2px}
+  .nav-item:hover{background:rgba(255,255,255,.06);color:#fff}.nav-item.active{background:#1E3A5F;color:#fff}
+  .nav-item svg{width:17px;height:17px}
+  .main{flex:1;margin-left:236px;display:flex;flex-direction:column;min-width:0}
+  .topbar{height:60px;background:var(--card);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;padding:0 22px;position:sticky;top:0;z-index:20}
+  .search{flex:1;max-width:420px}.search input{width:100%;padding:9px 13px;border:1px solid var(--border);border-radius:8px;outline:none}
+  .top-actions{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .icon-btn{width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative}
+  .badge-dot{position:absolute;top:-5px;right:-5px;background:var(--red);color:#fff;font-size:10px;font-weight:700;min-width:17px;height:17px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+  .avatar{width:34px;height:34px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px}
+  .content{padding:24px 26px}
+  .page{display:none}.page.active{display:block}
+  .page-head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;margin-bottom:20px;flex-wrap:wrap}
+  .page-head h2{font-size:22px;font-weight:700}.page-head p{color:var(--muted);font-size:13px;margin-top:3px}
+  .btn{padding:9px 15px;border-radius:8px;border:1px solid var(--border);background:#fff;font-weight:600;font-size:13px;cursor:pointer;display:inline-flex;gap:7px;align-items:center}
+  .btn:hover{background:var(--bg)}.btn.primary{background:var(--navy);color:#fff;border-color:var(--navy)}.btn.gold{background:var(--gold);color:#13263f;border-color:var(--gold)}
+  .grid{display:grid;gap:16px}.kpis{grid-template-columns:repeat(4,1fr)}.cols2{grid-template-columns:2fr 1fr}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:11px;box-shadow:var(--shadow)}
+  .card-head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border)}
+  .card-head h3{font-size:14px;font-weight:700}.pad{padding:16px 18px}
+  .kpi{padding:16px}.kpi .v{font-size:25px;font-weight:800}.kpi .l{color:var(--muted);font-size:12px;margin-top:3px}.kpi .ic{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center}
+  table{width:100%;border-collapse:collapse}th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:10px 14px;border-bottom:1px solid var(--border);background:var(--bg)}
+  td{padding:11px 14px;border-bottom:1px solid var(--border);font-size:13px}tbody tr:hover{background:var(--bg)}
+  .chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:14px;font-size:11px;font-weight:600}
+  .chip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+  .c-green{color:var(--green);background:var(--green-bg)}.c-amber{color:var(--amber);background:var(--amber-bg)}
+  .c-red{color:var(--red);background:var(--red-bg)}.c-blue{color:var(--blue);background:var(--blue-bg)}.c-grey{color:var(--muted);background:var(--bg)}
+  .tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid var(--border);color:var(--muted)}
+  .progress{height:7px;background:var(--border);border-radius:5px;overflow:hidden;min-width:90px}.progress>i{display:block;height:100%;background:linear-gradient(90deg,var(--navy),var(--gold))}
+  .cl-logo{width:30px;height:30px;border-radius:7px;color:#fff;font-weight:700;font-size:11px;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;margin-right:9px}
+  .pill-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}.pill{padding:7px 13px;border-radius:18px;border:1px solid var(--border);background:#fff;font-size:12.5px;font-weight:600;cursor:pointer}.pill.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .chart-box{height:240px;padding:6px}
+  .row-item{display:flex;align-items:center;gap:12px;padding:11px 18px;border-bottom:1px solid var(--border)}.row-item:last-child{border:none}
+  .stage{display:flex;gap:14px}.stage-node{width:28px;height:28px;border-radius:50%;border:2px solid var(--border);background:#fff;color:var(--muted);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .stage-node.done{background:var(--green);border-color:var(--green);color:#fff}.stage-node.active{background:var(--gold);border-color:var(--gold);color:#13263f}
+  .stage-line{width:2px;flex:1;background:var(--border);margin:2px auto}.stage-line.done{background:var(--green)}
+  .stage-card{flex:1;border:1px solid var(--border);border-radius:9px;padding:11px 14px;margin-bottom:12px}.stage-card.cur{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
+  .modal-bg{position:fixed;inset:0;background:rgba(8,18,33,.55);display:none;align-items:center;justify-content:center;z-index:60;padding:18px}.modal-bg.open{display:flex}
+  .modal{background:#fff;border-radius:14px;width:100%;max-width:520px;max-height:90vh;overflow:auto}
+  .modal-head{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+  .field{margin-bottom:13px}.field label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px}
+  .field input,.field select{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;outline:none}
+  .g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .chat-log{height:46vh;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+  .msg{max-width:86%;padding:11px 14px;border-radius:11px;font-size:13px;white-space:pre-wrap;line-height:1.55}
+  .msg.ai{background:var(--bg);border:1px solid var(--border);align-self:flex-start}.msg.me{background:var(--navy);color:#fff;align-self:flex-end}
+  .toast{position:fixed;bottom:22px;right:22px;background:var(--navy);color:#fff;padding:12px 17px;border-radius:9px;font-weight:600;font-size:13px;opacity:0;transform:translateY(60px);transition:.3s;z-index:90}.toast.show{opacity:1;transform:none}
+  .menu-btn{display:none}
+  .sub{color:var(--muted);font-size:11px}
+  .dropzone{border:2px dashed var(--border);border-radius:11px;padding:26px 18px;text-align:center;color:var(--muted);font-size:13px;transition:.15s}
+  .dropzone.drag{border-color:var(--gold);background:var(--amber-bg);color:var(--text)}
+  @media(max-width:1000px){.kpis{grid-template-columns:repeat(2,1fr)}.cols2{grid-template-columns:1fr}}
+  @media(max-width:760px){.sidebar{transform:translateX(-100%);transition:.25s}.sidebar.open{transform:none}.main{margin-left:0}.menu-btn{display:flex}}
+  @media(max-width:600px){
+    .topbar{height:auto;flex-wrap:wrap;padding:10px 14px;gap:8px}
+    .search{order:3;flex-basis:100%;max-width:none}
+    .content{padding:14px 12px}
+    .kpis{grid-template-columns:1fr}
+    .card{overflow-x:auto}
+    .page-head h2{font-size:19px}
+    .modal{max-width:none}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><div class="logo">C&amp;A</div><div><h1>Cassian &amp; Associates</h1><p>Management System</p></div></div>
+    <nav id="nav">
+      <div class="nav-item active" data-page="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</div>
+      <div class="nav-item" data-page="clients"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Clients</div>
+      <div class="nav-item" data-page="workflow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Audit Workflow</div>
+      <div class="nav-item" data-page="tasks"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Tasks &amp; Calendar</div>
+      <div class="nav-item" data-page="documents"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Documents</div>
+      <div class="nav-item" data-page="tax"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Tax Compliance</div>
+      <div class="nav-item" data-page="accounting"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><line x1="9" y1="7" x2="15" y2="7"/><line x1="9" y1="11" x2="15" y2="11"/></svg>Accounting</div>
+      <div class="nav-item" data-page="staff" id="nav-staff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Staff</div>
+      <div class="nav-item" data-page="billing" id="nav-billing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Billing</div>
+      <div class="nav-item" data-page="timesheets" id="nav-timesheets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Timesheets</div>
+      <div class="nav-item" data-page="settings" id="nav-settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</div>
+      <div class="nav-item" data-page="management" id="nav-management"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>Management</div>
+      <div class="nav-item" data-page="ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 1 3 3v1a3 3 0 0 1 3 3 3 3 0 0 1 0 6 3 3 0 0 1-3 3v1a3 3 0 0 1-6 0v-1a3 3 0 0 1-3-3 3 3 0 0 1 0-6 3 3 0 0 1 3-3V5a3 3 0 0 1 3-3z"/></svg>AI Assistant</div>
+      <div class="nav-item" data-page="airisk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>AI Risk Center</div>
+      <div class="nav-item" data-page="aianalytics"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-6"/></svg>AI Analytics</div>
+      <div class="nav-item" data-page="airecs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Recommendations</div>
+    </nav>
+    <div style="padding:13px 16px;border-top:1px solid rgba(255,255,255,.07);font-size:11px;color:#647da0">v1.0 · Dar es Salaam</div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="menu-btn icon-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">≡</button>
+      <div class="search"><input id="globalSearch" placeholder="Search documents (smart AI search)… press Enter"></div>
+      <div class="top-actions">
+        <button class="icon-btn" id="themeBtn" title="Toggle dark/light" onclick="toggleTheme()"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
+        <button class="icon-btn" id="notifBtn" title="Notifications"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="badge-dot" id="notifCount" style="display:none">0</span></button>
+        <div class="avatar" id="userAvatar" title="">EC</div>
+        <button class="btn" onclick="openChangePw()">Change password</button>
+        <button class="btn" onclick="logout()">Sign out</button>
+      </div>
+    </header>
+    <div class="content">
+      <section class="page active" id="page-dashboard"></section>
+      <section class="page" id="page-clients"></section>
+      <section class="page" id="page-workflow"></section>
+      <section class="page" id="page-tasks"></section>
+      <section class="page" id="page-documents"></section>
+      <section class="page" id="page-tax"></section>
+      <section class="page" id="page-accounting"></section>
+      <section class="page" id="page-staff"></section>
+      <section class="page" id="page-billing"></section>
+      <section class="page" id="page-timesheets"></section>
+      <section class="page" id="page-settings"></section>
+      <section class="page" id="page-management"></section>
+      <section class="page" id="page-ai"></section>
+      <section class="page" id="page-airisk"></section>
+      <section class="page" id="page-aianalytics"></section>
+      <section class="page" id="page-airecs"></section>
+    </div>
+  </div>
+</div>
+
+<!-- Add client modal -->
+<div class="modal-bg" id="clientModal">
+  <div class="modal">
+    <div class="modal-head"><h3 style="font-size:16px;font-weight:700">New client</h3><button class="btn" onclick="closeModal()">✕</button></div>
+    <div class="pad">
+      <div class="field"><label>Client name *</label><input id="m_name"></div>
+      <div class="g2"><div class="field"><label>TIN</label><input id="m_tin"></div><div class="field"><label>VRN</label><input id="m_vrn"></div></div>
+      <div class="g2">
+        <div class="field"><label>Category *</label><select id="m_cat"><option>Audit</option><option>Tax</option><option>Accounting</option><option>Consultancy</option></select></div>
+        <div class="field"><label>Financial year-end</label><input id="m_fye" placeholder="31 December"></div>
+      </div>
+      <div class="field"><label>Sector</label><input id="m_sector"></div>
+      <div class="field"><label>Contact email</label><input id="m_email"></div>
+    </div>
+    <div class="modal-head" style="border-top:1px solid var(--border);border-bottom:none;justify-content:flex-end;gap:10px">
+      <button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveClient()">Create client</button>
+    </div>
+  </div>
+</div>
+
+<!-- Change password modal -->
+<div class="modal-bg" id="pwModal">
+  <div class="modal">
+    <div class="modal-head"><h3 style="font-size:16px;font-weight:700">Change password</h3><button class="btn" onclick="closeChangePw()">✕</button></div>
+    <div class="pad">
+      <div class="field"><label>Current password</label><input id="cp_cur" type="password"></div>
+      <div class="field"><label>New password (min 6 characters)</label><input id="cp_new" type="password"></div>
+    </div>
+    <div class="modal-head" style="border-top:1px solid var(--border);border-bottom:none;justify-content:flex-end;gap:10px">
+      <button class="btn" onclick="closeChangePw()">Cancel</button><button class="btn primary" onclick="submitChangePw()">Update password</button>
+    </div>
+  </div>
+</div>
+
+<!-- Client detail + comments modal -->
+<div class="modal-bg" id="clientDetail">
+  <div class="modal" style="max-width:720px;width:100%">
+    <div class="modal-head"><h3 id="cd_title" style="font-size:16px;font-weight:700">Client</h3><button class="btn" onclick="closeClientDetail()">✕</button></div>
+    <div class="pad" id="cd_info"></div>
+    <div class="pad" style="padding-top:0">
+      <div id="cd_tabs" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"></div>
+      <div id="cd_comments" style="max-height:320px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:6px"></div>
+      <div style="display:flex;gap:8px;margin-top:10px"><input id="cd_input" placeholder="Write an internal note…" style="flex:1" onkeydown="if(event.key==='Enter')cdPost()"><button class="btn primary" onclick="cdPost()">Post</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Document version history modal -->
+<div class="modal-bg" id="docVerModal">
+  <div class="modal" style="max-width:560px;width:100%">
+    <div class="modal-head"><h3 id="dv_title" style="font-size:16px;font-weight:700">Version history</h3><button class="btn" onclick="document.getElementById('docVerModal').classList.remove('open')">✕</button></div>
+    <div class="pad" id="dv_body">Loading…</div>
+  </div>
+</div>
+
+<!-- Global search results modal -->
+<div class="modal-bg" id="searchModal">
+  <div class="modal" style="max-width:600px;width:100%">
+    <div class="modal-head"><h3 style="font-size:16px;font-weight:700">Search results</h3><button class="btn" onclick="document.getElementById('searchModal').classList.remove('open')">✕</button></div>
+    <div class="pad" id="sr_body" style="max-height:60vh;overflow:auto">…</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script>
+/* ---------------- API client ---------------- */
+const API='/api/v1';
+let TOKEN=localStorage.getItem('cassian_token');
+let USER=JSON.parse(localStorage.getItem('cassian_user')||'null');
+if(!TOKEN){ location.href='login.html'; }
+
+async function api(path, opts={}){
+  opts.headers=Object.assign({}, opts.headers||{});
+  const isForm=opts.body instanceof FormData;
+  if(!isForm && opts.body){ opts.headers['Content-Type']='application/json'; }
+  if(TOKEN) opts.headers.Authorization='Bearer '+TOKEN;
+  opts.credentials='include';
+  let res=await fetch(API+path, opts);
+  if(res.status===401){
+    const r=await fetch(API+'/auth/refresh',{method:'POST',credentials:'include'});
+    if(r.ok){ const j=await r.json(); TOKEN=j.data.accessToken; localStorage.setItem('cassian_token',TOKEN);
+      opts.headers.Authorization='Bearer '+TOKEN; res=await fetch(API+path,opts); }
+    else { logout(); throw new Error('Session expired'); }
+  }
+  const json=await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error((json.error&&json.error.message)||('HTTP '+res.status));
+  return json;
+}
+async function logout(){ try{ await fetch(API+'/auth/logout',{method:'POST',credentials:'include'}); }catch(e){}
+  localStorage.removeItem('cassian_token'); localStorage.removeItem('cassian_user'); location.href='login.html'; }
+async function downloadFile(path, filename){
+  try{
+    let res=await fetch(API+path,{headers:{Authorization:'Bearer '+TOKEN}});
+    if(res.status===401){ const r=await fetch(API+'/auth/refresh',{method:'POST',credentials:'include'}); if(r.ok){ TOKEN=(await r.json()).data.accessToken; localStorage.setItem('cassian_token',TOKEN); res=await fetch(API+path,{headers:{Authorization:'Bearer '+TOKEN}}); } }
+    if(!res.ok) throw new Error('Download failed ('+res.status+')');
+    const blob=await res.blob(); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1500);
+  }catch(e){ toast(e.message); }
+}
+
+/* ---------------- helpers ---------------- */
+const palette=['#1E3A5F','#C8A24B','#2c6fb3','#2e7d57','#b3402f','#7d5ba6','#0f766e'];
+function lg(s){let h=0;for(const c of (s||''))h=c.charCodeAt(0)+((h<<5)-h);return palette[Math.abs(h)%palette.length];}
+function initials(n){return (n||'?').replace(/Ltd|PLC|Co\.|Corp|Limited|&/g,'').trim().split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase();}
+function tzs(n){n=Number(n||0); if(n>=1e9)return 'TZS '+(n/1e9).toFixed(2)+'B'; if(n>=1e6)return 'TZS '+(n/1e6).toFixed(1)+'M'; if(n>=1e3)return 'TZS '+(n/1e3).toFixed(0)+'K'; return 'TZS '+n;}
+function statusChip(s){const m={completed:'c-green',in_progress:'c-amber',blocked:'c-red',not_started:'c-grey',
+  overdue:'c-red',due:'c-amber',upcoming:'c-blue',filed:'c-green',open:'c-blue',done:'c-green'};
+  return `<span class="chip ${m[s]||'c-grey'}">${(s||'').replace(/_/g,' ')}</span>`;}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2600);}
+function esc(s){return (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+let charts={};
+
+/* ---------------- theme (dark/light) ---------------- */
+function applyTheme(){ const dark=localStorage.getItem('cassian_theme')==='dark'; document.body.classList.toggle('dark',dark); }
+function toggleTheme(){ const dark=localStorage.getItem('cassian_theme')!=='dark'; localStorage.setItem('cassian_theme',dark?'dark':'light'); applyTheme(); }
+applyTheme();
+
+/* ---------------- session timeout (auto sign-out on inactivity) ---------------- */
+(function(){
+  const TIMEOUT=30*60*1000; let t;
+  function reset(){ clearTimeout(t); t=setTimeout(()=>{ try{toast('Session timed out — signing out for security.');}catch(e){} setTimeout(logout,1200); }, TIMEOUT); }
+  ['mousemove','keydown','click','scroll','touchstart'].forEach(ev=>document.addEventListener(ev,reset,{passive:true}));
+  reset();
+})();
+
+/* ---------------- navigation ---------------- */
+const renderers={dashboard:renderDashboard,clients:renderClients,workflow:renderWorkflow,tasks:renderTasks,documents:renderDocuments,tax:renderTax,accounting:renderAccounting,staff:renderStaff,billing:renderBilling,timesheets:renderTimesheets,settings:renderSettings,management:renderManagement,ai:renderAI,airisk:renderAIRisk,aianalytics:renderAIAnalytics,airecs:renderAIRecs};
+function go(page){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.page===page));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.getElementById('sidebar').classList.remove('open');
+  location.hash=page;
+  (renderers[page]||(()=>{}))();
+}
+document.querySelectorAll('.nav-item').forEach(n=>n.onclick=()=>go(n.dataset.page));
+
+/* ---------------- Staff / Users ---------------- */
+const STAFF_ROLES=['Admin','Partner','Manager','Senior Auditor','Accountant','Tax Consultant','Staff'];
+function isAdminLike(){return USER&&['Admin','Partner'].includes(USER.role);}
+(function(){var n=document.getElementById('nav-staff'); if(n&&!isAdminLike()) n.style.display='none';})();
+async function renderStaff(){
+  const el=document.getElementById('page-staff');
+  if(!isAdminLike()){ el.innerHTML='<div class="page-head"><div><h2>Staff</h2></div></div><div class="card pad" style="color:var(--muted)">Only Admin or Partner can manage staff.</div>'; return; }
+  el.innerHTML=`<div class="page-head"><div><h2>Staff &amp; Access</h2><p>Manage employee accounts, roles and passwords</p></div><button class="btn primary" onclick="staffAddForm()">+ Add staff</button></div><div id="staff_body">Loading…</div>`;
+  staffList();
+}
+async function staffList(){
+  const b=document.getElementById('staff_body');
+  try{
+    const {data}=await api('/auth/users');
+    b.innerHTML=`<div class="card"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Last login</th><th>Clients</th><th></th></tr></thead><tbody>
+    ${data.map(u=>`<tr><td>${esc(u.full_name)}</td><td>${esc(u.email)}</td>
+      <td><select class="btn" onchange="staffUpdate('${u.id}',{role:this.value})">${STAFF_ROLES.map(r=>`<option ${r===u.role?'selected':''}>${r}</option>`).join('')}</select></td>
+      <td><select class="btn" onchange="staffUpdate('${u.id}',{status:this.value})">${['active','suspended','on_leave'].map(s=>`<option ${s===u.status?'selected':''}>${s}</option>`).join('')}</select></td>
+      <td>${u.last_login_at?esc(String(u.last_login_at).slice(0,16).replace('T',' ')):'—'}</td>
+      <td>${u.managed_clients||0}</td>
+      <td><button class="btn" onclick="staffResetPw('${u.id}','${esc((u.full_name||'').replace(/'/g,''))}')">Reset password</button>${u.id===USER.id?'':` <button class="btn" onclick="staffDelete('${u.id}','${esc((u.full_name||'').replace(/'/g,''))}')">Remove</button>`}</td>
+    </tr>`).join('')}
+    </tbody></table></div>`;
+  }catch(e){ b.innerHTML=`<div class="card pad" style="color:var(--red)">${esc(e.message)}</div>`; }
+}
+function staffAddForm(){
+  const b=document.getElementById('staff_body');
+  b.innerHTML=`<div class="card"><div class="card-head"><h3>Add staff member</h3><button class="btn" onclick="staffList()">← Back</button></div><div class="pad">
+    <div class="g2"><div class="field"><label>Full name *</label><input id="su_name"></div><div class="field"><label>Email *</label><input id="su_email" type="email"></div></div>
+    <div class="g2"><div class="field"><label>Role *</label><select id="su_role">${STAFF_ROLES.map(r=>`<option>${r}</option>`).join('')}</select></div><div class="field"><label>Phone</label><input id="su_phone"></div></div>
+    <div class="field"><label>Temporary password *</label><input id="su_pw" placeholder="At least 6 characters"></div>
+    </div><div class="modal-head" style="border-top:1px solid var(--border);justify-content:flex-end;gap:10px"><button class="btn" onclick="staffList()">Cancel</button><button class="btn primary" onclick="staffCreate()">Create staff</button></div></div>`;
+}
+async function staffCreate(){
+  const body={full_name:val('su_name'),email:val('su_email'),role:val('su_role'),phone:val('su_phone'),password:val('su_pw')};
+  if(!body.full_name||!body.email||!body.password){ toast('Name, email and password are required'); return; }
+  if(body.password.length<6){ toast('Password must be at least 6 characters'); return; }
+  try{ await api('/auth/users',{method:'POST',body:JSON.stringify(body)}); toast('Staff member added'); staffList(); }catch(e){ toast(e.message); }
+}
+async function staffUpdate(id,patch){ try{ await api('/auth/users/'+id,{method:'PATCH',body:JSON.stringify(patch)}); toast('Updated'); }catch(e){ toast(e.message); staffList(); } }
+async function staffResetPw(id,name){ const pw=prompt('New password for '+name+' (min 6 characters):'); if(!pw)return; if(pw.length<6){toast('Password too short');return;} try{ await api('/auth/users/'+id+'/reset-password',{method:'POST',body:JSON.stringify({password:pw})}); toast('Password reset'); }catch(e){ toast(e.message); } }
+async function staffDelete(id,name){ if(!confirm('Remove '+name+'? They will lose access.'))return; try{ await api('/auth/users/'+id,{method:'DELETE'}); toast('Removed'); staffList(); }catch(e){ toast(e.message); } }
+/* ---- Change own password (all users) ---- */
+function openChangePw(){ const m=document.getElementById('pwModal'); document.getElementById('cp_cur').value=''; document.getElementById('cp_new').value=''; m.classList.add('open'); }
+function closeChangePw(){ document.getElementById('pwModal').classList.remove('open'); }
+async function submitChangePw(){
+  const cur=document.getElementById('cp_cur').value, nw=document.getElementById('cp_new').value;
+  if(!cur||!nw){ toast('Fill both fields'); return; }
+  if(nw.length<6){ toast('New password must be at least 6 characters'); return; }
+  try{ await api('/auth/change-password',{method:'POST',body:JSON.stringify({current_password:cur,new_password:nw})}); toast('Password changed successfully'); closeChangePw(); }catch(e){ toast(e.message); }
+}
+
+/* ---------------- Management KPIs ---------------- */
+(function(){var n=document.getElementById('nav-management'); if(n&&!(USER&&['Admin','Partner','Manager'].includes(USER.role))) n.style.display='none';})();
+async function renderManagement(){
+  const el=document.getElementById('page-management');
+  if(!(USER&&['Admin','Partner','Manager'].includes(USER.role))){ el.innerHTML='<div class="page-head"><div><h2>Management</h2></div></div><div class="card pad" style="color:var(--muted)">Manager/Partner/Admin only.</div>'; return; }
+  el.innerHTML=`<div class="page-head"><div><h2>Management KPIs</h2><p>Executive overview · revenue · productivity · compliance</p></div></div><div id="mg_body">Loading…</div>`;
+  try{
+    const {data:d}=await api('/management/kpis');
+    document.getElementById('mg_body').innerHTML=`
+      <div class="grid kpis" style="margin-bottom:16px">
+        ${kpi('Invoiced',tzs(d.revenue.invoiced),'var(--navy)','var(--bg)')}
+        ${kpi('Collected',tzs(d.revenue.collected),'var(--green)','var(--green-bg)')}
+        ${kpi('Outstanding',tzs(d.revenue.outstanding),'var(--red)','var(--red-bg)')}
+        ${kpi('Tax compliance',d.tax.compliance+'%','var(--blue)','var(--blue-bg)')}
+      </div>
+      <div class="grid kpis" style="margin-bottom:16px">
+        ${kpi('Avg audit completion',d.audit.avg_progress+'%','var(--gold)','var(--amber-bg)')}
+        ${kpi('Tasks done',d.tasks.done,'var(--green)','var(--green-bg)')}
+        ${kpi('Active clients',d.clients,'var(--blue)','var(--blue-bg)')}
+        ${kpi('Billable hrs',d.hours.billable+' / '+d.hours.total,'var(--navy)','var(--bg)')}
+      </div>
+      <div class="grid cols2">
+        <div class="card"><div class="card-head"><h3>Staff productivity</h3></div><table><thead><tr><th>Staff</th><th>Hours</th><th>Billable</th></tr></thead><tbody>
+          ${d.staff.length?d.staff.map(s=>`<tr><td>${esc(s.staff)}</td><td>${s.hours}</td><td>${s.billable}</td></tr>`).join(''):'<tr><td colspan="3" style="color:var(--muted)">No time logged yet</td></tr>'}</tbody></table></div>
+        <div class="card"><div class="card-head"><h3>Revenue by month</h3></div><table><thead><tr><th>Month</th><th style="text-align:right">Invoiced (TZS)</th></tr></thead><tbody>
+          ${d.revByMonth.length?d.revByMonth.map(m=>`<tr><td>${esc(m.month)}</td><td style="text-align:right">${accMoney(m.amount)}</td></tr>`).join(''):'<tr><td colspan="2" style="color:var(--muted)">No invoices yet</td></tr>'}</tbody></table></div>
+      </div>`;
+  }catch(e){ document.getElementById('mg_body').innerHTML=`<div class="card pad" style="color:var(--red)">${esc(e.message)}</div>`; }
+}
+
+/* ---------------- System Settings ---------------- */
+(function(){var n=document.getElementById('nav-settings'); if(n&&!(USER&&['Admin','Partner'].includes(USER.role))) n.style.display='none';})();
+async function renderSettings(){
+  const el=document.getElementById('page-settings');
+  if(!(USER&&['Admin','Partner'].includes(USER.role))){ el.innerHTML='<div class="page-head"><div><h2>Settings</h2></div></div><div class="card pad" style="color:var(--muted)">Admin/Partner only.</div>'; return; }
+  el.innerHTML=`<div class="page-head"><div><h2>System Settings</h2><p>Firm profile & defaults</p></div><button class="btn primary" onclick="saveSettings()">Save changes</button></div><div id="set_body">Loading…</div>`;
+  try{
+    const {data}=await api('/settings'); const f=data.firm||{}; const s=data.settings||{};
+    document.getElementById('set_body').innerHTML=`<div class="grid cols2">
+      <div class="card"><div class="card-head"><h3>Firm profile</h3></div><div class="pad">
+        <div class="field"><label>Firm name</label><input id="st_name" value="${esc(f.name||'')}"></div>
+        <div class="g2"><div class="field"><label>TIN</label><input id="st_tin" value="${esc(f.tin||'')}"></div><div class="field"><label>VRN</label><input id="st_vrn" value="${esc(f.vrn||'')}"></div></div>
+        <div class="field"><label>Address</label><input id="st_addr" value="${esc(f.address||'')}"></div>
+      </div></div>
+      <div class="card"><div class="card-head"><h3>Defaults</h3></div><div class="pad">
+        <div class="g2"><div class="field"><label>Default VAT rate (%)</label><input id="st_vat" value="${esc(s.default_vat_rate||'18')}"></div>
+          <div class="field"><label>Default currency</label><input id="st_cur" value="${esc(s.default_currency||'TZS')}"></div></div>
+        <div class="g2"><div class="field"><label>Invoice prefix</label><input id="st_pfx" value="${esc(s.invoice_prefix||'INV')}"></div>
+          <div class="field"><label>Deadline warning (days)</label><input id="st_warn" value="${esc(s.deadline_warn_days||'7')}"></div></div>
+      </div></div></div>`;
+  }catch(e){ document.getElementById('set_body').innerHTML=`<div class="card pad" style="color:var(--red)">${esc(e.message)}</div>`; }
+}
+async function saveSettings(){
+  const body={ firm:{ name:val('st_name'), tin:val('st_tin'), vrn:val('st_vrn'), address:val('st_addr') },
+    settings:{ default_vat_rate:val('st_vat'), default_currency:val('st_cur'), invoice_prefix:val('st_pfx'), deadline_warn_days:val('st_warn') } };
+  try{ await api('/settings',{method:'PUT',body:JSON.stringify(body)}); toast('Settings saved'); }catch(e){ toast(e.message); }
+}
+
+/* ---------------- Timesheets ---------------- */
+async function renderTimesheets(){
+  const el=document.getElementById('page-timesheets');
+  const mgr=USER&&['Admin','Partner','Manager'].includes(USER.role);
+  let clients=[]; try{ clients=(await api('/clients')).data; }catch(e){}
+  el.innerHTML=`<div class="page-head"><div><h2>Timesheets</h2><p>Log hours · billable tracking${mgr?' · profitability':''}</p></div></div>
+    <div class="grid cols2" style="margin-bottom:16px">
+      <div class="card"><div class="card-head"><h3>Log time</h3></div><div class="pad">
+        <div class="g2"><div class="field"><label>Date</label><input type="date" id="ts_date" value="${new Date().toISOString().slice(0,10)}"></div>
+          <div class="field"><label>Hours</label><input type="number" id="ts_hours" step="0.25" min="0" max="24"></div></div>
+        <div class="field"><label>Client (optional)</label><select id="ts_client"><option value="">— none —</option>${clients.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></div>
+        <div class="field"><label style="font-weight:400"><input type="checkbox" id="ts_billable" checked> Billable</label></div>
+        <div class="field"><label>Description</label><input id="ts_desc" placeholder="What did you work on?"></div>
+        <button class="btn primary" onclick="tsLog()">Log time</button>
+      </div></div>
+      <div class="card"><div class="card-head"><h3>My recent entries</h3></div><div id="ts_mine" class="pad">Loading…</div></div>
+    </div>
+    ${mgr?'<div class="card"><div class="card-head"><h3>Firm summary &amp; client profitability</h3></div><div id="ts_summary" class="pad">Loading…</div></div>':''}`;
+  tsMine(); if(mgr) tsSummary();
+}
+async function tsLog(){
+  const body={work_date:val('ts_date'),hours:Number(document.getElementById('ts_hours').value||0),client_id:val('ts_client')||null,billable:document.getElementById('ts_billable').checked?1:0,description:val('ts_desc')};
+  if(!body.hours){ toast('Enter hours'); return; }
+  try{ await api('/timesheets',{method:'POST',body:JSON.stringify(body)}); toast('Time logged'); document.getElementById('ts_hours').value=''; document.getElementById('ts_desc').value=''; tsMine(); if(USER&&['Admin','Partner','Manager'].includes(USER.role)) tsSummary(); }catch(e){ toast(e.message); }
+}
+async function tsMine(){
+  const b=document.getElementById('ts_mine');
+  try{ const {data}=await api('/timesheets/mine');
+    b.innerHTML=data.length?`<table><thead><tr><th>Date</th><th>Client</th><th>Hours</th><th></th><th></th></tr></thead><tbody>
+    ${data.map(t=>`<tr><td>${esc(t.work_date)}</td><td>${esc(t.client_name||'—')}</td><td>${t.hours}</td><td>${t.billable?'<span class="chip c-green">billable</span>':'<span class="chip c-grey">non-bill</span>'}</td><td><button class="btn" onclick="tsDel('${t.id}')">✕</button></td></tr>`).join('')}</tbody></table>`:'<span style="color:var(--muted)">No entries yet.</span>';
+  }catch(e){ b.innerHTML=`<span style="color:var(--red)">${esc(e.message)}</span>`; }
+}
+async function tsDel(id){ try{ await api('/timesheets/'+id,{method:'DELETE'}); tsMine(); }catch(e){ toast(e.message); } }
+async function tsSummary(){
+  const b=document.getElementById('ts_summary');
+  try{ const {data}=await api('/timesheets/summary');
+    b.innerHTML=`<div class="grid cols2"><div><h4 style="margin:0 0 8px">By staff</h4><table><thead><tr><th>Staff</th><th>Hours</th><th>Billable</th></tr></thead><tbody>
+      ${data.byUser.map(u=>`<tr><td>${esc(u.staff)}</td><td>${u.hours}</td><td>${u.billable_hours}</td></tr>`).join('')||'<tr><td colspan="3" style="color:var(--muted)">—</td></tr>'}</tbody></table></div>
+      <div><h4 style="margin:0 0 8px">Client profitability</h4><table><thead><tr><th>Client</th><th>Hours</th><th>Billable</th><th style="text-align:right">Invoiced</th></tr></thead><tbody>
+      ${data.byClient.map(c=>`<tr><td>${esc(c.client)}</td><td>${c.hours}</td><td>${c.billable_hours}</td><td style="text-align:right">${accMoney(c.invoiced)}</td></tr>`).join('')||'<tr><td colspan="4" style="color:var(--muted)">—</td></tr>'}</tbody></table></div></div>`;
+  }catch(e){ b.innerHTML=`<span style="color:var(--red)">${esc(e.message)}</span>`; }
+}
+
+/* ---------------- Billing & Revenue ---------------- */
+const BILLING_ROLES=['Admin','Partner','Manager','Accountant'];
+function canBilling(){return USER&&BILLING_ROLES.includes(USER.role);}
+(function(){var n=document.getElementById('nav-billing'); if(n&&!canBilling()) n.style.display='none';})();
+async function renderBilling(){
+  const el=document.getElementById('page-billing');
+  if(!canBilling()){ el.innerHTML='<div class="page-head"><div><h2>Billing</h2></div></div><div class="card pad" style="color:var(--muted)">No access.</div>'; return; }
+  el.innerHTML=`<div class="page-head"><div><h2>Billing &amp; Revenue</h2><p>Client fee invoices · payments · revenue</p></div><button class="btn primary" onclick="billNewInvoice()">+ New invoice</button></div>
+    <div id="bill_kpis" class="grid kpis" style="margin-bottom:16px"></div>
+    <div class="card"><div class="card-head"><h3>Invoices</h3></div><div id="bill_table">Loading…</div></div>`;
+  billRevenue(); billList();
+}
+async function billRevenue(){
+  try{ const {data}=await api('/billing/revenue'); const t=data.totals;
+    document.getElementById('bill_kpis').innerHTML=
+      kpi('Invoiced',tzs(t.invoiced),'var(--navy)','var(--bg)')+
+      kpi('Collected',tzs(data.collected),'var(--green)','var(--green-bg)')+
+      kpi('Outstanding',tzs(t.outstanding),'var(--red)','var(--red-bg)')+
+      kpi('Paid invoices',t.paid_n,'var(--blue)','var(--blue-bg)');
+  }catch(e){ document.getElementById('bill_kpis').innerHTML=`<div class="card pad" style="color:var(--red)">${esc(e.message)}</div>`; }
+}
+async function billList(){
+  const b=document.getElementById('bill_table');
+  try{ const {data}=await api('/billing/invoices');
+    b.innerHTML=`<table><thead><tr><th>Number</th><th>Client</th><th style="text-align:right">Total</th><th style="text-align:right">Paid</th><th>Status</th><th></th></tr></thead><tbody>
+    ${data.length?data.map(i=>`<tr><td>${esc(i.number||'—')}</td><td>${esc(i.client_name||'—')}</td><td style="text-align:right">${accMoney(i.total)}</td><td style="text-align:right">${accMoney(i.paid)}</td><td>${statusChip(i.status)}</td>
+      <td>${i.status==='draft'?`<button class="btn" onclick="billIssue('${i.id}')">Issue</button>`:''}${i.status==='open'?`<button class="btn" onclick="billPay('${i.id}',${Number(i.total)-Number(i.paid)})">Record payment</button>`:''}</td></tr>`).join(''):'<tr><td colspan="6" style="color:var(--muted)">No invoices yet.</td></tr>'}
+    </tbody></table>`;
+  }catch(e){ b.innerHTML=`<div class="pad" style="color:var(--red)">${esc(e.message)}</div>`; }
+}
+async function billIssue(id){ try{ await api('/billing/invoices/'+id+'/issue',{method:'POST'}); toast('Invoice issued'); renderBilling(); }catch(e){ toast(e.message); } }
+async function billPay(id,due){
+  const amt=prompt('Payment amount (TZS):', due>0?String(due):''); if(!amt)return;
+  const method=prompt('Method: mpesa, airtel, tigo, halopesa, card, or bank:','mpesa'); if(!method)return;
+  try{ await api('/billing/invoices/'+id+'/payments',{method:'POST',body:JSON.stringify({amount:Number(amt),method:method.trim().toLowerCase()})}); toast('Payment recorded'); renderBilling(); }catch(e){ toast(e.message); }
+}
+async function billNewInvoice(){
+  const el=document.getElementById('page-billing'); let clients=[];
+  try{ clients=(await api('/clients')).data; }catch(e){ toast(e.message); return; }
+  el.innerHTML=`<div class="page-head"><div><h2>New invoice</h2></div><button class="btn" onclick="renderBilling()">← Back</button></div>
+    <div class="card"><div class="pad">
+      <div class="g2"><div class="field"><label>Client *</label><select id="bi_client">${clients.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></div>
+        <div class="field"><label>Due date</label><input type="date" id="bi_due"></div></div>
+      <div class="field"><label style="font-weight:400"><input type="checkbox" id="bi_vat" checked> Add VAT 18%</label></div>
+      <table id="bi_lines"><thead><tr><th>Description</th><th>Qty</th><th>Unit (TZS)</th><th></th></tr></thead><tbody></tbody></table>
+      <button class="btn" onclick="biAddLine()" style="margin-top:8px">+ Add line</button>
+    </div><div class="modal-head" style="border-top:1px solid var(--border);justify-content:flex-end;gap:10px"><button class="btn" onclick="renderBilling()">Cancel</button><button class="btn primary" onclick="biSave()">Create invoice (draft)</button></div></div>`;
+  biAddLine();
+}
+function biAddLine(){
+  const tb=document.querySelector('#bi_lines tbody'); const tr=document.createElement('tr');
+  tr.innerHTML=`<td><input class="bi_desc" placeholder="Service"></td><td><input class="bi_qty" type="number" value="1" style="width:70px"></td><td><input class="bi_unit" type="number" step="0.01" style="width:140px"></td><td><button class="btn" onclick="this.closest('tr').remove()">✕</button></td>`;
+  tb.appendChild(tr);
+}
+async function biSave(){
+  const lines=[...document.querySelectorAll('#bi_lines tbody tr')].map(tr=>({description:tr.querySelector('.bi_desc').value,quantity:Number(tr.querySelector('.bi_qty').value||1),unit_amount:Number(tr.querySelector('.bi_unit').value||0)})).filter(l=>l.unit_amount>0);
+  if(!lines.length){ toast('Add at least one line with an amount'); return; }
+  const body={client_id:val('bi_client'),due_at:val('bi_due')||null,vat:document.getElementById('bi_vat').checked,lines};
+  try{ await api('/billing/invoices',{method:'POST',body:JSON.stringify(body)}); toast('Invoice created (draft)'); renderBilling(); }catch(e){ toast(e.message); }
+}
+
+/* ---------------- Accounting ---------------- */
+window.ACC={clients:[],client:null,tab:'tb',_opts:''};
+function accMoney(n){return Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+async function renderAccounting(){
+  const el=document.getElementById('page-accounting');
+  el.innerHTML=`<div class="page-head"><div><h2>Accounting</h2><p>Journals · ledger · trial balance · financial statements (TZS/USD)</p></div>
+    <select id="acc_client" class="btn" style="min-width:220px"></select></div>
+    <div class="card" style="margin-bottom:14px"><div class="pad" id="acc_tabs" style="display:flex;gap:8px;flex-wrap:wrap">
+      ${['tb:Trial Balance','fs:Financial Statements','journals:Journals','coa:Chart of Accounts','ledger:Ledger','vat:VAT Calculator'].map(t=>{const i=t.indexOf(':');return `<span class="pill" data-t="${t.slice(0,i)}">${t.slice(i+1)}</span>`;}).join('')}
+    </div></div><div id="acc_body">Loading…</div>`;
+  try{
+    const {data}=await api('/clients');
+    ACC.clients=data;
+    if((!ACC.client||!data.some(c=>c.id===ACC.client))&&data.length) ACC.client=data[0].id;
+    const sel=document.getElementById('acc_client');
+    sel.innerHTML=data.map(c=>`<option value="${c.id}" ${c.id===ACC.client?'selected':''}>${esc(c.name)}</option>`).join('');
+    sel.onchange=()=>{ACC.client=sel.value;accGo(ACC.tab);};
+  }catch(e){ document.getElementById('acc_body').innerHTML=`<div class="card pad" style="color:var(--red)">${esc(e.message)}</div>`; return; }
+  el.querySelectorAll('#acc_tabs .pill').forEach(p=>p.onclick=()=>accGo(p.dataset.t));
+  accGo(ACC.tab);
+}
+function accGo(tab){
+  ACC.tab=tab;
+  document.querySelectorAll('#acc_tabs .pill').forEach(p=>p.classList.toggle('active',p.dataset.t===tab));
+  ({tb:accTB,fs:accFS,journals:accJournals,coa:accCOA,ledger:accLedger,vat:accVAT}[tab]||accTB)();
+}
+function accNoClient(b){ if(!ACC.client){b.innerHTML='<div class="card pad" style="color:var(--muted)">Select a client.</div>';return true;} return false; }
+async function accTB(){
+  const b=document.getElementById('acc_body'); if(accNoClient(b))return; b.innerHTML='<div class="card pad">Loading trial balance…</div>';
+  try{
+    const {data}=await api('/accounting/trial-balance?client_id='+ACC.client);
+    if(!data.rows.length){b.innerHTML='<div class="card pad" style="color:var(--muted)">No posted journal entries yet for this client.</div>';return;}
+    b.innerHTML=`<div class="card"><div class="card-head"><h3>Trial Balance</h3><div style="display:flex;gap:8px;align-items:center"><span class="chip ${data.balanced?'c-green':'c-red'}">${data.balanced?'Balanced':'Out of balance'}</span><button class="btn" onclick="downloadFile('/export/trial-balance.xlsx?client_id='+ACC.client,'trial-balance.xlsx')">Excel</button><button class="btn" onclick="downloadFile('/export/trial-balance.pdf?client_id='+ACC.client,'trial-balance.pdf')">PDF</button></div></div>
+      <table><thead><tr><th>Code</th><th>Account</th><th>Type</th><th style="text-align:right">Debit</th><th style="text-align:right">Credit</th></tr></thead><tbody>
+      ${data.rows.map(r=>`<tr><td>${esc(r.code)}</td><td>${esc(r.name)}</td><td><span class="chip c-grey">${r.type}</span></td>
+        <td style="text-align:right">${r.debit?accMoney(r.debit):''}</td><td style="text-align:right">${r.credit?accMoney(r.credit):''}</td></tr>`).join('')}
+      <tr style="font-weight:700;border-top:2px solid var(--border)"><td colspan="3">Totals (TZS)</td>
+        <td style="text-align:right">${accMoney(data.totals.debit)}</td><td style="text-align:right">${accMoney(data.totals.credit)}</td></tr>
+      </tbody></table></div>`;
+  }catch(e){ b.innerHTML=`<div class="card pad" style="color:var(--red)">${esc(e.message)}</div>`; }
+}
+async function accFS(){
+  const b=document.getElementById('acc_body'); if(accNoClient(b))return; b.innerHTML='<div class="card pad">Loading…</div>';
+  try{
+    const {data}=await api('/accounting/financial-statements?client_id='+ACC.client);
+    const pl=data.profitAndLoss, bs=data.balanceSheet;
+    const L=(arr)=>arr.length?arr.map(r=>`<tr><td>${esc(r.name)}</td><td style="text-align:right">${accMoney(r.amount)}</td></tr>`).join(''):'<tr><td colspan="2" style="color:var(--muted)">—</td></tr>';
+    b.innerHTML=`<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn" onclick="downloadFile('/export/financial-statements.pdf?client_id='+ACC.client,'financial-statements.pdf')">Export PDF</button></div><div class="grid cols2">
+      <div class="card"><div class="card-head"><h3>Statement of Profit or Loss</h3></div><table><tbody>
+        <tr style="font-weight:600"><td colspan="2">Income</td></tr>${L(pl.income)}
+        <tr><td>Total income</td><td style="text-align:right;font-weight:700">${accMoney(pl.totalIncome)}</td></tr>
+        <tr style="font-weight:600"><td colspan="2">Expenses</td></tr>${L(pl.expense)}
+        <tr><td>Total expenses</td><td style="text-align:right;font-weight:700">${accMoney(pl.totalExpense)}</td></tr>
+        <tr style="font-weight:800;border-top:2px solid var(--border)"><td>Profit for the period</td><td style="text-align:right;color:${pl.profit>=0?'var(--green)':'var(--red)'}">${accMoney(pl.profit)}</td></tr>
+        </tbody></table></div>
+      <div class="card"><div class="card-head"><h3>Statement of Financial Position</h3><span class="chip ${bs.balanced?'c-green':'c-red'}">${bs.balanced?'Balanced':'Off'}</span></div><table><tbody>
+        <tr style="font-weight:600"><td colspan="2">Assets</td></tr>${L(bs.assets)}
+        <tr><td>Total assets</td><td style="text-align:right;font-weight:700">${accMoney(bs.totalAssets)}</td></tr>
+        <tr style="font-weight:600"><td colspan="2">Liabilities</td></tr>${L(bs.liabilities)}
+        <tr><td>Total liabilities</td><td style="text-align:right;font-weight:700">${accMoney(bs.totalLiabilities)}</td></tr>
+        <tr style="font-weight:600"><td colspan="2">Equity</td></tr>${L(bs.equity)}
+        <tr><td>Current-period profit</td><td style="text-align:right">${accMoney(bs.currentProfit)}</td></tr>
+        <tr><td>Total equity</td><td style="text-align:right;font-weight:700">${accMoney(bs.totalEquity)}</td></tr>
+        <tr style="font-weight:800;border-top:2px solid var(--border)"><td>Liabilities + Equity</td><td style="text-align:right">${accMoney(bs.totalLiabilitiesAndEquity)}</td></tr>
+        </tbody></table></div></div>`;
+  }catch(e){ b.innerHTML=`<div class="card pad" style="color:var(--red)">${esc(e.message)}</div>`; }
+}
+async function accCOA(){
+  const b=document.getElementById('acc_body'); if(accNoClient(b))return; b.innerHTML='<div class="card pad">Loading…</div>';
+  try{
+    const {data}=await api('/accounting/accounts?client_id='+ACC.client);
+    b.innerHTML=`<div class="card"><div class="card-head"><h3>Chart of Accounts</h3><button class="btn primary" onclick="accAddAccount()">+ Add account</button></div>
+      <table><thead><tr><th>Code</th><th>Name</th><th>Type</th></tr></thead><tbody>
+      ${data.length?data.map(a=>`<tr><td>${esc(a.code)}</td><td>${esc(a.name)}</td><td><span class="chip c-grey">${a.type}</span></td></tr>`).join(''):'<tr><td colspan="3" style="color:var(--muted)">No accounts yet.</td></tr>'}
+      </tbody></table></div>`;
+  }catch(e){ b.innerHTML=`<div class="card pad" style="color:var(--red)">${esc(e.message)}</div>`; }
+}
+async function accAddAccount(){
+  const code=prompt('Account code (e.g. 7000):'); if(!code) return;
+  const name=prompt('Account name:'); if(!name) return;
+  const type=prompt('Type: asset, liability, equity, income, or expense:','expense'); if(!type) return;
+  try{ await api('/accounting/accounts',{method:'POST',body:JSON.stringify({client_id:ACC.client,code:code.trim(),name:name.trim(),type:type.trim().toLowerCase()})}); toast('Account added'); accCOA(); }
+  catch(e){ toast(e.message); }
+}
+async function accJournals(){
+  const b=document.getElementById('acc_body'); if(accNoClient(b))return; b.innerHTML='<div class="card pad">Loading…</div>';
+  try{
+    const {data}=await api('/accounting/journals?client_id='+ACC.client);
+    b.innerHTML=`<div class="card"><div class="card-head"><h3>Journal Entries</h3><button class="btn primary" onclick="accNewJournal()">+ New journal</button></div>
+      <table><thead><tr><th>Ref</th><th>Date</th><th>Narration</th><th style="text-align:right">Amount</th><th>Status</th><th></th></tr></thead><tbody>
+      ${data.length?data.map(j=>`<tr><td>${esc(j.ref_no||'—')}</td><td>${esc(j.entry_date)}</td><td>${esc(j.narration||'')}</td>
+        <td style="text-align:right">${accMoney(j.total)}</td><td>${statusChip(j.status)}</td>
+        <td>${j.status==='draft'?`<button class="btn" onclick="accPost('${j.id}')">Post</button>`:(j.status==='posted'?`<button class="btn" onclick="accReverse('${j.id}')">Reverse</button>`:'')}</td></tr>`).join(''):'<tr><td colspan="6" style="color:var(--muted)">No journals yet.</td></tr>'}
+      </tbody></table></div>`;
+  }catch(e){ b.innerHTML=`<div class="card pad" style="color:var(--red)">${esc(e.message)}</div>`; }
+}
+async function accPost(id){ try{ await api('/accounting/journals/'+id+'/post',{method:'POST'}); toast('Posted'); accJournals(); }catch(e){toast(e.message);} }
+async function accReverse(id){ if(!confirm('Create a reversing entry?'))return; try{ await api('/accounting/journals/'+id+'/reverse',{method:'POST'}); toast('Reversed'); accJournals(); }catch(e){toast(e.message);} }
+async function accNewJournal(){
+  const b=document.getElementById('acc_body');
+  let accounts=[];
+  try{ accounts=(await api('/accounting/accounts?client_id='+ACC.client)).data; }catch(e){ toast(e.message); return; }
+  if(!accounts.length){ toast('Add accounts first (Chart of Accounts).'); return; }
+  ACC._opts=accounts.map(a=>`<option value="${a.id}">${esc(a.code)} — ${esc(a.name)}</option>`).join('');
+  b.innerHTML=`<div class="card"><div class="card-head"><h3>New journal entry</h3><button class="btn" onclick="accJournals()">← Back</button></div>
+    <div class="pad">
+      <div class="g2"><div class="field"><label>Date *</label><input type="date" id="je_date" value="${new Date().toISOString().slice(0,10)}"></div>
+        <div class="field"><label>Reference</label><input id="je_ref" placeholder="JE-011"></div></div>
+      <div class="field"><label>Narration</label><input id="je_narr" placeholder="Description"></div>
+      <table id="je_lines"><thead><tr><th>Account</th><th>Description</th><th style="text-align:right">Debit</th><th style="text-align:right">Credit</th><th></th></tr></thead><tbody></tbody></table>
+      <button class="btn" onclick="accAddLine()" style="margin-top:8px">+ Add line</button>
+      <div id="je_balance" style="margin-top:10px;font-weight:600"></div>
+    </div>
+    <div class="modal-head" style="border-top:1px solid var(--border);justify-content:flex-end;gap:10px"><button class="btn" onclick="accJournals()">Cancel</button><button class="btn primary" onclick="accSaveJournal()">Save draft</button></div></div>`;
+  accAddLine(); accAddLine(); accUpdateBalance();
+}
+function accAddLine(){
+  const tb=document.querySelector('#je_lines tbody'); const tr=document.createElement('tr');
+  tr.innerHTML=`<td><select class="je_acc btn">${ACC._opts}</select></td>
+    <td><input class="je_desc" placeholder="—"></td>
+    <td><input class="je_debit" type="number" min="0" step="0.01" style="text-align:right;width:120px" oninput="accUpdateBalance()"></td>
+    <td><input class="je_credit" type="number" min="0" step="0.01" style="text-align:right;width:120px" oninput="accUpdateBalance()"></td>
+    <td><button class="btn" onclick="this.closest('tr').remove();accUpdateBalance()">✕</button></td>`;
+  tb.appendChild(tr);
+}
+function accUpdateBalance(){
+  let d=0,c=0; document.querySelectorAll('#je_lines tbody tr').forEach(tr=>{d+=Number(tr.querySelector('.je_debit').value||0);c+=Number(tr.querySelector('.je_credit').value||0);});
+  d=Math.round(d*100)/100;c=Math.round(c*100)/100; const ok=Math.abs(d-c)<0.01&&d>0;
+  document.getElementById('je_balance').innerHTML=`Debits: ${accMoney(d)} · Credits: ${accMoney(c)} · <span style="color:${ok?'var(--green)':'var(--red)'}">${ok?'Balanced ✓':'Out of balance'}</span>`;
+}
+async function accSaveJournal(){
+  const lines=[...document.querySelectorAll('#je_lines tbody tr')].map(tr=>({account_id:tr.querySelector('.je_acc').value,description:tr.querySelector('.je_desc').value,debit:Number(tr.querySelector('.je_debit').value||0),credit:Number(tr.querySelector('.je_credit').value||0)})).filter(l=>l.debit>0||l.credit>0);
+  const body={client_id:ACC.client,entry_date:document.getElementById('je_date').value,ref_no:document.getElementById('je_ref').value||null,narration:document.getElementById('je_narr').value||null,lines};
+  try{ await api('/accounting/journals',{method:'POST',body:JSON.stringify(body)}); toast('Journal saved (draft)'); accJournals(); }
+  catch(e){ toast(e.message); }
+}
+async function accLedger(){
+  const b=document.getElementById('acc_body'); if(accNoClient(b))return;
+  let accounts=[];
+  try{ accounts=(await api('/accounting/accounts?client_id='+ACC.client)).data; }catch(e){ b.innerHTML=`<div class="card pad" style="color:var(--red)">${esc(e.message)}</div>`; return; }
+  b.innerHTML=`<div class="card"><div class="card-head"><h3>General Ledger</h3>
+    <select id="led_acc" class="btn">${accounts.map(a=>`<option value="${a.id}">${esc(a.code)} — ${esc(a.name)}</option>`).join('')}</select></div>
+    <div id="led_body" class="pad">${accounts.length?'Loading…':'<span style="color:var(--muted)">No accounts.</span>'}</div></div>`;
+  const sel=document.getElementById('led_acc'); if(sel){ sel.onchange=accLedgerLoad; if(accounts.length) accLedgerLoad(); }
+}
+async function accLedgerLoad(){
+  const acctId=document.getElementById('led_acc').value; const body=document.getElementById('led_body'); body.innerHTML='Loading…';
+  try{
+    const {data}=await api('/accounting/ledger?client_id='+ACC.client+'&account_id='+acctId);
+    body.innerHTML=`<table><thead><tr><th>Date</th><th>Ref</th><th>Narration</th><th style="text-align:right">Debit</th><th style="text-align:right">Credit</th><th style="text-align:right">Balance</th></tr></thead><tbody>
+    ${data.rows.length?data.rows.map(r=>`<tr><td>${esc(r.entry_date)}</td><td>${esc(r.ref_no||'')}</td><td>${esc(r.narration||r.description||'')}</td>
+      <td style="text-align:right">${r.debit?accMoney(r.debit):''}</td><td style="text-align:right">${r.credit?accMoney(r.credit):''}</td><td style="text-align:right">${accMoney(r.balance)}</td></tr>`).join(''):'<tr><td colspan="6" style="color:var(--muted)">No postings.</td></tr>'}
+    <tr style="font-weight:700;border-top:2px solid var(--border)"><td colspan="5">Closing balance</td><td style="text-align:right">${accMoney(data.closing)}</td></tr></tbody></table>`;
+  }catch(e){ body.innerHTML=`<span style="color:var(--red)">${esc(e.message)}</span>`; }
+}
+function accVAT(){
+  const b=document.getElementById('acc_body');
+  b.innerHTML=`<div class="card" style="max-width:540px"><div class="card-head"><h3>VAT Calculator (Tanzania — 18%)</h3></div><div class="pad">
+    <div class="g2"><div class="field"><label>Amount (TZS)</label><input id="vat_amt" type="number" step="0.01" oninput="accVATCalc()"></div>
+      <div class="field"><label>Rate (%)</label><input id="vat_rate" type="number" value="18" oninput="accVATCalc()"></div></div>
+    <div class="field"><label style="font-weight:400"><input type="checkbox" id="vat_incl" onchange="accVATCalc()"> Amount is VAT-inclusive</label></div>
+    <div id="vat_out" style="margin-top:6px;font-size:14px;color:var(--muted)">Enter an amount.</div>
+  </div></div>`;
+}
+async function accVATCalc(){
+  const amount=document.getElementById('vat_amt').value; if(amount==='')return;
+  try{
+    const {data}=await api('/accounting/vat-calc',{method:'POST',body:JSON.stringify({amount,rate:document.getElementById('vat_rate').value,inclusive:document.getElementById('vat_incl').checked})});
+    document.getElementById('vat_out').innerHTML=`<span style="color:var(--text)">Net: <b>${accMoney(data.net)}</b> &nbsp;·&nbsp; VAT (${data.rate}%): <b>${accMoney(data.vat)}</b> &nbsp;·&nbsp; Gross: <b>${accMoney(data.gross)}</b></span>`;
+  }catch(e){ document.getElementById('vat_out').innerHTML=`<span style="color:var(--red)">${esc(e.message)}</span>`; }
+}
+
+/* ---------------- Dashboard ---------------- */
+async function renderDashboard(){
+  const el=document.getElementById('page-dashboard');
+  el.innerHTML=`<div class="page-head"><div><h2>Welcome, ${esc((USER&&USER.full_name)||'')}</h2><p>Practice overview · live data from the API</p></div>
+    <button class="btn primary" onclick="openModal()">+ New client</button></div><div id="dashBody">Loading…</div>`;
+  try{
+    const {data:d}=await api('/reports/dashboard');
+    const k=d.kpis;
+    document.getElementById('dashBody').innerHTML=`
+      <div class="grid kpis" style="margin-bottom:16px">
+        ${kpi('Active clients',k.activeClients,'var(--blue)','var(--blue-bg)')}
+        ${kpi('Deadlines (7 days)',k.deadlines7,'var(--amber)','var(--amber-bg)')}
+        ${kpi('Pending reviews',k.pendingReviews,'var(--green)','var(--green-bg)')}
+        ${kpi('Overdue tasks',k.overdueTasks,'var(--red)','var(--red-bg)')}
+      </div>
+      <div class="grid kpis" style="margin-bottom:16px">
+        ${kpi('Revenue (fees)',tzs(k.revenue),'var(--navy)','var(--bg)')}
+        ${kpi('Avg audit completion',k.avgCompletion+'%','var(--gold)','var(--amber-bg)')}
+        ${kpi('Unread alerts',d.unread,'var(--red)','var(--red-bg)')}
+        ${kpi('Client mix',d.clientMix.reduce((a,b)=>a+b.n,0),'var(--blue)','var(--blue-bg)')}
+      </div>
+      <div class="grid cols2" style="margin-bottom:16px">
+        <div class="card"><div class="card-head"><h3>Audit engagements — progress</h3><span class="tag" style="cursor:pointer" onclick="go('workflow')">Open</span></div>
+          <table><thead><tr><th>Client</th><th>Stage</th><th>Progress</th><th>Manager</th></tr></thead><tbody>
+          ${d.auditProgress.map(e=>`<tr><td><span class="cl-logo" style="background:${lg(e.client_name)}">${initials(e.client_name)}</span>${esc(e.client_name)}</td>
+            <td><span class="chip c-blue">${esc(e.current_stage)}</span></td>
+            <td><div style="display:flex;gap:8px;align-items:center"><div class="progress"><i style="width:${e.progress_pct}%"></i></div>${e.progress_pct}%</div></td>
+            <td>${esc(e.manager_name||'—')}</td></tr>`).join('')||'<tr><td colspan="4" style="color:var(--muted)">No engagements</td></tr>'}
+          </tbody></table></div>
+        <div class="card"><div class="card-head"><h3>Client mix</h3></div><div class="pad"><div class="chart-box"><canvas id="mixChart"></canvas></div></div></div>
+      </div>
+      <div class="grid cols2">
+        <div class="card"><div class="card-head"><h3>Compliance status</h3></div><div class="pad"><div class="chart-box"><canvas id="compChart"></canvas></div></div></div>
+        <div class="card"><div class="card-head"><h3>Upcoming deadlines</h3><span class="tag" style="cursor:pointer" onclick="go('tax')">Tax</span></div>
+          ${d.deadlines.map(o=>`<div class="row-item"><div style="flex:1"><b>${esc(o.type)} — ${esc(o.client_name)}</b><div style="color:var(--muted);font-size:11.5px">${esc(o.authority)} · due ${esc(o.due_date)}</div></div>${statusChip(o.status)}</div>`).join('')||'<div class="pad" style="color:var(--muted)">No upcoming deadlines</div>'}
+        </div>
+      </div>`;
+    // charts
+    Object.values(charts).forEach(c=>c&&c.destroy()); charts={};
+    charts.mix=new Chart(document.getElementById('mixChart'),{type:'doughnut',
+      data:{labels:d.clientMix.map(x=>x.category),datasets:[{data:d.clientMix.map(x=>x.n),backgroundColor:palette,borderWidth:0}]},
+      options:{maintainAspectRatio:false,cutout:'60%',plugins:{legend:{position:'bottom'}}}});
+    const cs=d.compliance;
+    charts.comp=new Chart(document.getElementById('compChart'),{type:'bar',
+      data:{labels:cs.map(x=>x.status),datasets:[{label:'Obligations',data:cs.map(x=>x.n),
+        backgroundColor:cs.map(x=>({overdue:'#b3402f',due:'#b5800f',upcoming:'#2c6fb3',filed:'#2e7d57',exempt:'#697586'}[x.status]||'#1E3A5F')),borderRadius:5}]},
+      options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}}}}});
+  }catch(e){ document.getElementById('dashBody').innerHTML=`<div class="card pad" style="color:var(--red)">${esc(e.message)}</div>`; }
+}
+function kpi(label,val,color,bg){return `<div class="card kpi"><div class="ic" style="background:${bg};color:${color}"><svg viewBox="0 0 24 24" width="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg></div><div class="v">${val}</div><div class="l">${label}</div></div>`;}
+
+/* ---------------- Clients ---------------- */
+let clientFilter='all';
+function canDeleteClients(){return USER&&['Admin','Partner'].includes(USER.role);}
+async function renderClients(){
+  const el=document.getElementById('page-clients');
+  const canDel=canDeleteClients();
+  el.innerHTML=`<div class="page-head"><div><h2>Clients</h2><p>Live client register</p></div><div style="display:flex;gap:10px">${canDel?'<button class="btn" onclick="showDeletedClients()">Deleted</button>':''}<button class="btn" onclick="downloadFile('/export/clients.xlsx','clients.xlsx')">Export Excel</button><button class="btn primary" onclick="openModal()">+ Add client</button></div></div>
+    <div class="pill-row" id="cfilters">${['all','Audit','Tax','Accounting','Consultancy'].map(f=>`<div class="pill ${f===clientFilter?'active':''}" data-f="${f}">${f==='all'?'All':f}</div>`).join('')}</div>
+    <div class="card" id="clientTable">Loading…</div>`;
+  el.querySelectorAll('#cfilters .pill').forEach(p=>p.onclick=()=>{clientFilter=p.dataset.f;renderClients();});
+  try{
+    const qp=clientFilter==='all'?'':'?category='+clientFilter;
+    const {data}=await api('/clients'+qp);
+    document.getElementById('clientTable').innerHTML=`<table><thead><tr><th>Client</th><th>Category</th><th>TIN / VRN</th><th>Year-end</th><th>Manager</th><th>Status</th>${canDel?'<th></th>':''}</tr></thead><tbody>
+      ${data.map(c=>`<tr style="cursor:pointer" onclick="viewClient('${c.id}')"><td><span class="cl-logo" style="background:${lg(c.name)}">${initials(c.name)}</span>${esc(c.name)}</td>
+        <td><span class="tag">${esc(c.category)}</span></td><td>${esc(c.tin||'—')}<div style="color:var(--muted);font-size:11px">${esc(c.vrn||'')}</div></td>
+        <td>${esc(c.financial_year_end||'—')}</td><td>${esc(c.manager_name||'—')}</td><td><span class="chip c-blue">${esc(c.status||'')}</span></td>
+        ${canDel?`<td><button class="btn" onclick="event.stopPropagation();deleteClient('${c.id}','${esc((c.name||'').replace(/'/g,''))}')">Delete</button></td>`:''}</tr>`).join('')
+        ||`<tr><td colspan="${canDel?7:6}" style="color:var(--muted)">No clients found</td></tr>`}
+    </tbody></table>`;
+  }catch(e){ document.getElementById('clientTable').innerHTML=`<div class="pad" style="color:var(--red)">${esc(e.message)}</div>`; }
+}
+async function deleteClient(id,name){
+  if(!confirm('Delete client "'+name+'"?\n\nThis is a SOFT delete — the client is hidden but can be restored from the Deleted list. Related files, tasks and records are preserved.'))return;
+  try{ await api('/clients/'+id,{method:'DELETE'}); toast('Client deleted (can be restored)'); renderClients(); }catch(e){ toast(e.message); }
+}
+async function showDeletedClients(){
+  const el=document.getElementById('page-clients');
+  el.innerHTML=`<div class="page-head"><div><h2>Deleted clients</h2><p>Soft-deleted — restore to bring them back</p></div><button class="btn" onclick="renderClients()">← Back to clients</button></div><div class="card" id="delTable">Loading…</div>`;
+  try{
+    const {data}=await api('/clients/deleted');
+    document.getElementById('delTable').innerHTML=`<table><thead><tr><th>Client</th><th>Category</th><th>TIN / VRN</th><th>Deleted</th><th></th></tr></thead><tbody>
+    ${data.length?data.map(c=>`<tr><td>${esc(c.name)}</td><td><span class="tag">${esc(c.category)}</span></td><td>${esc(c.tin||'—')} ${esc(c.vrn||'')}</td>
+      <td>${esc(String(c.deleted_at||'').slice(0,16).replace('T',' '))}</td>
+      <td><button class="btn primary" onclick="restoreClient('${c.id}')">Restore</button></td></tr>`).join(''):'<tr><td colspan="5" style="color:var(--muted)">No deleted clients</td></tr>'}
+    </tbody></table>`;
+  }catch(e){ document.getElementById('delTable').innerHTML=`<div class="pad" style="color:var(--red)">${esc(e.message)}</div>`; }
+}
+async function restoreClient(id){ try{ await api('/clients/'+id+'/restore',{method:'POST'}); toast('Client restored'); showDeletedClients(); }catch(e){ toast(e.message); } }
+window.CD={client:null,area:'general'};
+async function viewClient(id){
+  try{
+    const {data:c}=await api('/clients/'+id); CD.client=c; CD.area='general';
+    document.getElementById('cd_title').textContent=c.name;
+    document.getElementById('cd_info').innerHTML=`<div style="display:flex;gap:22px;flex-wrap:wrap;color:var(--muted);font-size:13px">
+      <span><b style="color:var(--text)">Category:</b> ${esc(c.category)}</span>
+      <span><b style="color:var(--text)">TIN:</b> ${esc(c.tin||'—')}</span>
+      <span><b style="color:var(--text)">VRN:</b> ${esc(c.vrn||'—')}</span>
+      <span><b style="color:var(--text)">Manager:</b> ${esc(c.manager_name||'—')}</span>
+      <span><b style="color:var(--text)">Status:</b> ${esc(c.status||'—')}</span></div>`;
+    document.getElementById('cd_tabs').innerHTML=['general','audit','tax','accounting'].map(a=>`<span class="pill ${a===CD.area?'active':''}" data-a="${a}" onclick="cdGo('${a}')">${a[0].toUpperCase()+a.slice(1)}</span>`).join('');
+    document.getElementById('clientDetail').classList.add('open');
+    cdLoad();
+  }catch(e){ toast(e.message); }
+}
+function closeClientDetail(){ document.getElementById('clientDetail').classList.remove('open'); }
+function cdGo(a){ CD.area=a; document.querySelectorAll('#cd_tabs .pill').forEach(p=>p.classList.toggle('active',p.dataset.a===a)); cdLoad(); }
+async function cdLoad(){
+  const box=document.getElementById('cd_comments'); box.innerHTML='Loading…';
+  try{
+    const {data}=await api('/comments?client_id='+CD.client.id+'&area='+CD.area);
+    box.innerHTML=data.length?data.map(m=>`<div class="row-item" style="display:block">
+      <div style="font-size:12px;color:var(--muted)"><b style="color:var(--text)">${esc(m.author||'Unknown')}</b> · ${esc(String(m.created_at).slice(0,16).replace('T',' '))}${m.edited_at?' · edited':''}${m.user_id===USER.id?` · <a href="#" onclick="cdEdit('${m.id}',event)">edit</a> · <a href="#" onclick="cdDel('${m.id}',event)">delete</a>`:''}</div>
+      <div id="cm_${m.id}">${esc(m.body)}</div></div>`).join(''):'<div style="color:var(--muted);padding:8px">No notes yet in this area.</div>';
+    box.scrollTop=box.scrollHeight;
+  }catch(e){ box.innerHTML=`<span style="color:var(--red)">${esc(e.message)}</span>`; }
+}
+async function cdPost(){
+  const inp=document.getElementById('cd_input'); const body=(inp.value||'').trim(); if(!body)return;
+  try{ await api('/comments',{method:'POST',body:JSON.stringify({client_id:CD.client.id,area:CD.area,body})}); inp.value=''; cdLoad(); }catch(e){ toast(e.message); }
+}
+async function cdEdit(id,ev){ ev.preventDefault(); const cur=document.getElementById('cm_'+id).textContent; const nv=prompt('Edit note:',cur); if(nv==null||!nv.trim())return; try{ await api('/comments/'+id,{method:'PATCH',body:JSON.stringify({body:nv.trim()})}); cdLoad(); }catch(e){ toast(e.message); } }
+async function cdDel(id,ev){ ev.preventDefault(); if(!confirm('Delete this note?'))return; try{ await api('/comments/'+id,{method:'DELETE'}); cdLoad(); }catch(e){ toast(e.message); } }
+function openModal(){document.getElementById('clientModal').classList.add('open');}
+function closeModal(){document.getElementById('clientModal').classList.remove('open');}
+async function saveClient(){
+  const body={name:val('m_name'),tin:val('m_tin'),vrn:val('m_vrn'),category:val('m_cat'),financial_year_end:val('m_fye'),sector:val('m_sector'),contact_email:val('m_email')};
+  if(!body.name){toast('Name is required');return;}
+  try{ await api('/clients',{method:'POST',body:JSON.stringify(body)}); closeModal(); toast('Client created'); ['m_name','m_tin','m_vrn','m_fye','m_sector','m_email'].forEach(i=>document.getElementById(i).value=''); renderClients(); }
+  catch(e){ toast(e.message); }
+}
+const val=id=>document.getElementById(id).value.trim();
+
+/* ---------------- Workflow ---------------- */
+let curEng=null;
+async function renderWorkflow(){
+  const el=document.getElementById('page-workflow');
+  el.innerHTML=`<div class="page-head"><div><h2>Audit Workflow</h2><p>9-stage engagement engine · role-gated transitions</p></div></div>
+    <div class="grid" style="grid-template-columns:300px 1fr;gap:16px;align-items:start">
+      <div class="card" id="engList">Loading…</div><div id="engDetail" class="card pad" style="color:var(--muted)">Select an engagement…</div></div>`;
+  try{
+    const {data}=await api('/engagements');
+    document.getElementById('engList').innerHTML=data.map(e=>`<div class="row-item" style="cursor:pointer" onclick="openEng('${e.id}')">
+      <span class="cl-logo" style="background:${lg(e.client_name)}">${initials(e.client_name)}</span>
+      <div style="flex:1"><b>${esc(e.client_name)}</b><div style="color:var(--muted);font-size:11.5px">${esc(e.current_stage)} · ${e.progress_pct}%</div></div></div>`).join('')
+      ||'<div class="pad" style="color:var(--muted)">No engagements</div>';
+    if(data[0]) openEng(data[0].id);
+  }catch(e){ document.getElementById('engList').innerHTML=`<div class="pad" style="color:var(--red)">${esc(e.message)}</div>`; }
+}
+async function openEng(id){
+  curEng=id;
+  try{
+    const {data:e}=await api('/engagements/'+id);
+    const stagesHtml=e.stages.map((s,i)=>{
+      const cls=s.status==='completed'?'done':s.status==='in_progress'?'active':'';
+      const node=s.status==='completed'?'✓':(i+1);
+      return `<div class="stage"><div style="display:flex;flex-direction:column;align-items:center;width:30px">
+        <div class="stage-node ${cls}">${node}</div>${i<e.stages.length-1?`<div class="stage-line ${s.status==='completed'?'done':''}"></div>`:''}</div>
+        <div class="stage-card ${s.status==='in_progress'?'cur':''}"><div style="display:flex;justify-content:space-between;gap:10px"><b>${esc(s.name)}</b>${statusChip(s.status)}</div>
+        <div style="color:var(--muted);font-size:11.5px;margin-top:5px">Progress ${s.progress_pct}%${s.notes?' · '+esc(s.notes):''}</div></div></div>`;
+    }).join('');
+    document.getElementById('engDetail').style.color='';
+    document.getElementById('engDetail').innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+        <div><h3 style="font-size:17px;font-weight:700">${esc(e.client_name)}</h3>
+          <div style="color:var(--muted);font-size:12.5px;margin-top:3px">FY ${e.financial_year||''} · ${esc(e.manager_name||'')} (mgr) · ${esc(e.partner_name||'')} (ptr)</div></div>
+        <div style="display:flex;gap:8px"><button class="btn" onclick="revertEng()">◂ Revert</button><button class="btn primary" onclick="advanceEng()">Advance ▸</button></div>
+      </div>
+      <div style="margin-bottom:14px"><div class="progress" style="height:9px"><i style="width:${e.progress_pct}%"></i></div>
+        <div style="color:var(--muted);font-size:12px;margin-top:6px">Current stage: <b style="color:var(--text)">${esc(e.current_stage)}</b> · ${e.progress_pct}% complete</div></div>
+      ${stagesHtml}
+      <div id="wpPanel" style="margin-top:18px;border-top:1px solid var(--border);padding-top:14px">Loading working papers…</div>
+      <div id="apPanel" style="margin-top:18px;border-top:1px solid var(--border);padding-top:14px">Loading approvals…</div>`;
+    loadWorkpapers(id); loadApprovals(id);
+  }catch(e){ document.getElementById('engDetail').innerHTML=`<div style="color:var(--red)">${esc(e.message)}</div>`; }
+}
+async function loadWorkpapers(engId){
+  const el=document.getElementById('wpPanel'); if(!el) return;
+  const canEdit=USER&&['Admin','Partner','Manager','Senior Auditor'].includes(USER.role);
+  const canReview=USER&&['Admin','Partner','Manager'].includes(USER.role);
+  try{
+    const {data}=await api('/workpapers?engagement_id='+engId);
+    const head=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b>Working papers (lead schedules)</b>${canEdit&&!data.length?`<button class="btn" onclick="wpGenerate('${engId}')">Generate standard index</button>`:''}</div>`;
+    if(!data.length){ el.innerHTML=head+'<div style="color:var(--muted)">No working papers yet.</div>'; return; }
+    el.innerHTML=head+`<table><thead><tr><th>Ref</th><th>Schedule</th><th>Status</th><th>Prepared</th><th>Reviewed</th>${canEdit?'<th></th>':''}</tr></thead><tbody>
+    ${data.map(w=>`<tr><td><b>${esc(w.reference)}</b></td><td>${esc(w.title)}<div class="sub">${esc(w.section||'')}</div></td>
+      <td>${statusChip(w.status)}</td><td>${esc(w.prepared_by||'—')}</td><td>${esc(w.reviewed_by||'—')}</td>
+      ${canEdit?`<td style="white-space:nowrap">${w.status!=='prepared'&&w.status!=='reviewed'?`<button class="btn" onclick="wpSet('${w.id}','${engId}','prepared')">Mark prepared</button>`:''}${w.status==='prepared'&&canReview?`<button class="btn" onclick="wpSet('${w.id}','${engId}','reviewed')">Review ✓</button>`:''}</td>`:''}</tr>`).join('')}
+    </tbody></table>`;
+  }catch(e){ el.innerHTML=`<span style="color:var(--red)">${esc(e.message)}</span>`; }
+}
+async function wpGenerate(engId){ try{ const {data}=await api('/workpapers/generate',{method:'POST',body:JSON.stringify({engagement_id:engId})}); toast(data.created+' working papers created'); loadWorkpapers(engId); }catch(e){ toast(e.message); } }
+async function wpSet(id,engId,status){ try{ await api('/workpapers/'+id,{method:'PATCH',body:JSON.stringify({status})}); toast('Updated'); loadWorkpapers(engId); }catch(e){ toast(e.message); } }
+async function loadApprovals(engId){
+  const el=document.getElementById('apPanel'); if(!el) return;
+  const canApprove=USER&&['Admin','Partner','Manager'].includes(USER.role);
+  try{
+    const {data}=await api('/approvals?entity_type=engagement&entity_id='+engId);
+    const head=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b>Approvals & sign-off</b>${canApprove?`<span><button class="btn primary" onclick="engApprove('${engId}','approved')">Approve & sign</button> <button class="btn" onclick="engApprove('${engId}','rejected')">Reject</button></span>`:''}</div>`;
+    el.innerHTML=head+(data.length?data.map(a=>`<div class="row-item" style="display:block"><span class="chip ${a.decision==='approved'?'c-green':'c-red'}">${a.decision}</span> <b>${esc(a.signature||'')}</b> — ${esc(a.approver||'')} (${esc(a.approver_role||'')}) · ${esc(String(a.created_at).slice(0,16).replace('T',' '))}${a.comment?`<div style="color:var(--muted);font-size:12px">${esc(a.comment)}</div>`:''}</div>`).join(''):'<div style="color:var(--muted)">No approvals yet.</div>');
+  }catch(e){ el.innerHTML=`<span style="color:var(--red)">${esc(e.message)}</span>`; }
+}
+async function engApprove(engId,decision){
+  const signature=prompt((decision==='approved'?'Approve':'Reject')+' — type your full name as a digital signature:'); if(!signature||!signature.trim())return;
+  const comment=prompt('Comment (optional):')||'';
+  try{ await api('/approvals',{method:'POST',body:JSON.stringify({entity_type:'engagement',entity_id:engId,decision,signature:signature.trim(),comment})}); toast('Sign-off recorded'); loadApprovals(engId); }catch(e){ toast(e.message); }
+}
+async function advanceEng(){ try{ const {data}=await api('/engagements/'+curEng+'/advance',{method:'POST',body:JSON.stringify({})}); toast('Advanced to '+data.current_stage); openEng(curEng);}catch(e){ toast(e.message);} }
+async function revertEng(){ try{ const {data}=await api('/engagements/'+curEng+'/revert',{method:'POST',body:JSON.stringify({})}); toast('Reverted to '+data.current_stage); openEng(curEng);}catch(e){ toast(e.message);} }
+
+/* ---------------- Tasks ---------------- */
+async function renderTasks(){
+  const el=document.getElementById('page-tasks');
+  el.innerHTML=`<div class="page-head"><div><h2>Tasks &amp; Calendar</h2><p>Your assigned and team tasks</p></div></div><div class="card" id="taskTable">Loading…</div>`;
+  try{ const {data}=await api('/tasks');
+    document.getElementById('taskTable').innerHTML=`<table><thead><tr><th></th><th>Task</th><th>Client</th><th>Assignee</th><th>Priority</th><th>Due</th><th>Status</th></tr></thead><tbody>
+      ${data.map(t=>`<tr><td><input type="checkbox" ${t.status==='done'?'checked':''} onchange="toggleTask('${t.id}',this.checked)"></td>
+        <td>${esc(t.title)}</td><td>${esc(t.client_name||'—')}</td><td>${esc(t.assignee_name||'—')}</td>
+        <td><span class="tag">${esc(t.priority)}</span></td><td>${esc((t.due_date||'').slice(0,10)||'—')}</td><td>${statusChip(t.status)}</td></tr>`).join('')
+        ||'<tr><td colspan="7" style="color:var(--muted)">No tasks</td></tr>'}</tbody></table>`;
+  }catch(e){ document.getElementById('taskTable').innerHTML=`<div class="pad" style="color:var(--red)">${esc(e.message)}</div>`; }
+}
+async function toggleTask(id,done){ try{ await api('/tasks/'+id,{method:'PATCH',body:JSON.stringify({status:done?'done':'open'})}); toast('Task updated'); }catch(e){ toast(e.message); renderTasks(); } }
+
+/* ---------------- Documents ---------------- */
+let docClients=[];
+async function renderDocuments(){
+  const el=document.getElementById('page-documents');
+  el.innerHTML=`<div class="page-head"><div><h2>Drive &amp; Documents</h2><p>Google Drive integration · auto-classified · workflow-linked</p></div>
+    <div style="display:flex;gap:8px"><button class="btn" id="syncBtn" onclick="driveSync()">&#8635; Sync now</button>
+      <button class="btn primary" id="connBtn" onclick="driveConnect()">Connect Drive</button></div></div>
+  <div id="driveStatusCard" class="card pad" style="margin-bottom:16px">Loading Drive status…</div>
+  <div class="grid" style="grid-template-columns:1.4fr 1fr;gap:16px;align-items:start">
+    <div>
+      <div class="card" style="margin-bottom:16px"><div class="card-head"><h3>Upload center</h3>
+        <select id="up_client" onchange="onClientChange()" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;max-width:240px"></select></div>
+        <div class="pad"><div id="dropzone" class="dropzone">Drag &amp; drop files here, or
+          <label style="color:var(--navy);cursor:pointer;text-decoration:underline">browse<input type="file" id="up_file" multiple style="display:none"></label>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:6px">Auto-detected &amp; filed by type · up to 200&nbsp;MB · multiple files</div></div></div></div>
+      <div class="card"><div class="card-head"><h3>Synced files</h3>
+        <input id="docSearch" placeholder="Filter by name…" oninput="loadDocs()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px"></div>
+        <div id="docTable">Loading…</div></div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:16px"><div class="card-head"><h3>Missing documents</h3></div><div id="missingBox" class="pad">Select a client…</div></div>
+      <div class="card" style="margin-bottom:16px"><div class="card-head"><h3>Folder explorer</h3><button class="btn" onclick="loadFolderTree()">Open</button></div><div id="folderBox" class="pad" style="color:var(--muted);font-size:12.5px">Drive folder contents appear here.</div></div>
+      <div class="card"><div class="card-head"><h3>Activity timeline</h3></div><div id="activityBox">Loading…</div></div>
+    </div>
+  </div>`;
+  const dz=document.getElementById('dropzone'), fi=document.getElementById('up_file');
+  dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag');});
+  dz.addEventListener('dragleave',()=>dz.classList.remove('drag'));
+  dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag');uploadFiles(e.dataTransfer.files);});
+  fi.addEventListener('change',()=>uploadFiles(fi.files));
+  try{ const cl=await api('/clients'); docClients=cl.data;
+    document.getElementById('up_client').innerHTML=docClients.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join(''); }catch(e){}
+  loadDriveStatus(); loadActivity(); onClientChange();
+}
+async function loadDriveStatus(){
+  try{ const {data}=await api('/drive/status'); const conn=data.connected||data.firmConnected; const s=data.sync;
+    document.getElementById('connBtn').textContent=conn?'Reconnect Drive':'Connect Drive';
+    document.getElementById('driveStatusCard').innerHTML=`<div style="display:flex;gap:26px;flex-wrap:wrap;align-items:center">
+      <div><div class="sub" style="text-transform:uppercase;letter-spacing:.5px">Mode</div><b>${esc(data.mode)}</b></div>
+      <div><div class="sub" style="text-transform:uppercase;letter-spacing:.5px">Status</div>${conn?'<span class="chip c-green">connected</span>':'<span class="chip c-amber">not connected</span>'}</div>
+      <div><div class="sub" style="text-transform:uppercase;letter-spacing:.5px">Account</div><b>${esc((data.account&&data.account.email)||'—')}</b></div>
+      <div><div class="sub" style="text-transform:uppercase;letter-spacing:.5px">Last sync</div><b>${s&&s.last_synced_at?esc(String(s.last_synced_at).slice(0,16).replace('T',' ')):'never'}</b></div>
+      ${s&&s.stats&&s.stats.created!=null?`<div><div class="sub" style="text-transform:uppercase;letter-spacing:.5px">Last result</div><b>${s.stats.created||0} new · ${s.stats.updated||0} updated</b></div>`:''}</div>`;
+  }catch(e){ document.getElementById('driveStatusCard').innerHTML=`<span style="color:var(--red)">${esc(e.message)}</span>`; }
+}
+async function driveConnect(){
+  try{ const {data}=await api('/drive/connect'); window.open(data.url,'_blank','width=520,height=660'); toast('Finish Google sign-in in the popup, then Sync.'); }
+  catch(e){ toast(e.message); }
+}
+async function driveSync(){
+  const b=document.getElementById('syncBtn'); b.disabled=true; const t=b.textContent; b.textContent='Syncing…';
+  try{ const {data}=await api('/drive/sync',{method:'POST',body:JSON.stringify({})});
+    toast(data.connected===false?'Connect Drive first':(data.mode==='local'?'Local mode — nothing to sync':`Synced: ${data.created||0} new, ${data.updated||0} updated`));
+    loadDriveStatus(); loadDocs(); loadActivity();
+  }catch(e){ toast(e.message); } finally{ b.disabled=false; b.textContent=t; }
+}
+async function uploadFiles(files){
+  if(!files||!files.length) return;
+  const clientId=document.getElementById('up_client').value;
+  if(!clientId){ toast('Select a client first'); return; }
+  for(const f of files){
+    const fd=new FormData(); fd.append('file',f); fd.append('client_id',clientId); fd.append('year',new Date().getFullYear());
+    try{ const {data}=await api('/documents/upload',{method:'POST',body:fd});
+      toast(`${f.name} → ${(data.detected_type||'other').replace(/_/g,' ')}${data.workflow&&data.workflow.advanced?' · advanced to '+data.workflow.advanced:''}`);
+    }catch(e){ toast(`${f.name}: ${e.message}`); }
+  }
+  loadDocs(); loadActivity(); loadMissing();
+}
+async function loadDocs(){
+  const cid=(document.getElementById('up_client')||{}).value||'';
+  const term=(document.getElementById('docSearch')||{}).value||'';
+  try{ const {data}=await api('/documents?'+(cid?'client_id='+cid:'')+(term?'&search='+encodeURIComponent(term):''));
+    document.getElementById('docTable').innerHTML=`<table><thead><tr><th>Name</th><th>Detected type</th><th>Year</th><th>Size</th><th></th></tr></thead><tbody>
+      ${data.map(d=>`<tr><td>${esc(d.name)}</td>
+        <td><span class="chip c-blue">${esc((d.detected_type||d.doc_type||'other').replace(/_/g,' '))}</span>${d.classified_conf?` <span class="sub">${Math.round(d.classified_conf*100)}%</span>`:''}</td>
+        <td>${d.year||'—'}</td><td>${fmtSize(d.size_bytes)}</td>
+        <td style="white-space:nowrap"><button class="btn" onclick="openDoc('${d.id}','preview')">Preview</button>
+          <button class="btn" onclick="openDoc('${d.id}','download','${esc(d.name).replace(/['\\]/g,'')}')">Get</button> <button class="btn" onclick="docVersions('${d.id}','${esc(d.name).replace(/['\\]/g,'')}')">History</button></td></tr>`).join('')
+        ||'<tr><td colspan="5" style="color:var(--muted)">No documents</td></tr>'}</tbody></table>`;
+  }catch(e){ document.getElementById('docTable').innerHTML=`<div class="pad" style="color:var(--red)">${esc(e.message)}</div>`; }
+}
+async function docVersions(id,name){
+  const m=document.getElementById('docVerModal');
+  document.getElementById('dv_title').textContent='Version history — '+name;
+  document.getElementById('dv_body').innerHTML='Loading…'; m.classList.add('open');
+  try{ const {data}=await api('/documents/'+id+'/versions');
+    document.getElementById('dv_body').innerHTML=data.length?`<table><thead><tr><th>Version</th><th>Size</th><th>Uploaded by</th><th>Date</th></tr></thead><tbody>
+    ${data.map(v=>`<tr><td><b>v${v.version}</b></td><td>${fmtSize(v.size_bytes)}</td><td>${esc(v.uploaded_by||'—')}</td><td>${esc(String(v.created_at).slice(0,16).replace('T',' '))}</td></tr>`).join('')}</tbody></table>`:'<span style="color:var(--muted)">No version history yet. Versions are recorded automatically each time the file changes.</span>';
+  }catch(e){ document.getElementById('dv_body').innerHTML=`<span style="color:var(--red)">${esc(e.message)}</span>`; }
+}
+function onClientChange(){ loadDocs(); loadMissing(); }
+async function loadMissing(){
+  const cid=(document.getElementById('up_client')||{}).value; if(!cid)return;
+  try{ const {data}=await api('/drive/clients/'+cid+'/missing-documents');
+    document.getElementById('missingBox').innerHTML=`<div style="margin-bottom:10px;font-size:12.5px;color:var(--muted)">${data.total-data.missing}/${data.total} present · <b style="color:${data.missing?'var(--red)':'var(--green)'}">${data.missing} missing</b></div>`+
+      data.items.map(i=>`<div style="display:flex;align-items:center;gap:9px;padding:5px 0;font-size:13px"><span class="chip ${i.satisfied?'c-green':'c-red'}"></span>${esc(i.label)}</div>`).join('');
+  }catch(e){ document.getElementById('missingBox').innerHTML=`<span style="color:var(--red)">${esc(e.message)}</span>`; }
+}
+async function loadActivity(){
+  try{ const {data}=await api('/drive/activity');
+    document.getElementById('activityBox').innerHTML=data.length?data.map(a=>`<div class="row-item"><span class="chip c-grey">${esc(a.action)}</span>
+      <div style="flex:1"><b style="font-size:12.5px">${esc(a.document_name||'')}</b><div class="sub">${esc(a.user_name||'system')} · ${esc(a.client_name||'')} · ${esc(String(a.created_at||'').slice(0,16).replace('T',' '))}</div></div></div>`).join('')
+      :'<div class="pad" style="color:var(--muted)">No file activity yet.</div>';
+  }catch(e){ document.getElementById('activityBox').innerHTML=`<div class="pad" style="color:var(--red)">${esc(e.message)}</div>`; }
+}
+async function loadFolderTree(){
+  const cid=(document.getElementById('up_client')||{}).value; if(!cid)return;
+  const box=document.getElementById('folderBox'); box.textContent='Loading…';
+  try{ const {data}=await api('/drive/clients/'+cid+'/folder-tree');
+    if((!data.folders||!data.folders.length)&&(!data.files||!data.files.length)){ box.innerHTML='<span style="color:var(--muted)">No folders yet — Connect Drive &amp; Sync, or provision a folder tree.</span>'; return; }
+    box.innerHTML=(data.folders||[]).map(f=>`<div style="padding:4px 0">&#128193; ${esc(f.name)}</div>`).join('')+
+      (data.files||[]).map(f=>`<div style="padding:4px 0">&#128196; <a href="${esc(f.webViewLink||'#')}" target="_blank">${esc(f.name)}</a></div>`).join('');
+  }catch(e){ box.innerHTML=`<span style="color:var(--red)">${esc(e.message)}</span>`; }
+}
+function fmtSize(n){n=Number(n||0); if(n>=1048576)return (n/1048576).toFixed(1)+' MB'; if(n>=1024)return (n/1024).toFixed(0)+' KB'; return n+' B';}
+// Fetch a protected file with the bearer token, then open/download as a blob.
+async function openDoc(id,kind,name){
+  try{
+    let res=await fetch(API+'/documents/'+id+'/'+kind,{headers:{Authorization:'Bearer '+TOKEN}});
+    if(res.status===401){ const r=await fetch(API+'/auth/refresh',{method:'POST',credentials:'include'});
+      if(r.ok){ TOKEN=(await r.json()).data.accessToken; localStorage.setItem('cassian_token',TOKEN);
+        res=await fetch(API+'/documents/'+id+'/'+kind,{headers:{Authorization:'Bearer '+TOKEN}}); } }
+    if(!res.ok){ toast('Cannot open file'); return; }
+    const url=URL.createObjectURL(await res.blob());
+    if(kind==='download'){ const a=document.createElement('a'); a.href=url; a.download=name||'document'; document.body.appendChild(a); a.click(); a.remove(); }
+    else window.open(url,'_blank');
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }catch(e){ toast(e.message); }
+}
+
+/* ---------------- Tax ---------------- */
+async function renderTax(){
+  const el=document.getElementById('page-tax');
+  el.innerHTML=`<div class="page-head"><div><h2>Tax Compliance</h2><p>TRA · NSSF · WCF · PDPC obligations</p></div>
+    <button class="btn" onclick="runScan()">Run reminder scan</button></div><div class="card" id="taxTable">Loading…</div>`;
+  try{ const {data}=await api('/tax/obligations');
+    document.getElementById('taxTable').innerHTML=`<table><thead><tr><th>Obligation</th><th>Client</th><th>Authority</th><th>Period</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody>
+      ${data.map(o=>`<tr><td><b>${esc(o.type)}</b></td><td>${esc(o.client_name)}</td><td>${esc(o.authority)}</td><td>${esc(o.period||'')}</td><td>${esc(o.due_date)}</td><td>${statusChip(o.status)}</td>
+        <td>${o.status!=='filed'?`<button class="btn" onclick="markFiled('${o.id}')">Mark filed</button>`:'✓'}</td></tr>`).join('')
+        ||'<tr><td colspan="7" style="color:var(--muted)">No obligations</td></tr>'}</tbody></table>`;
+  }catch(e){ document.getElementById('taxTable').innerHTML=`<div class="pad" style="color:var(--red)">${esc(e.message)}</div>`; }
+}
+async function markFiled(id){ try{ await api('/tax/obligations/'+id,{method:'PATCH',body:JSON.stringify({status:'filed'})}); toast('Marked filed'); renderTax(); }catch(e){ toast(e.message);} }
+async function runScan(){ try{ const {data}=await api('/tax/scan',{method:'POST',body:JSON.stringify({})}); toast(`Scan: ${data.notifications} alerts, ${data.obligationsOverdue} overdue`); loadNotifications(); }catch(e){ toast(e.message);} }
+
+/* ---------------- AI ---------------- */
+function renderAI(){
+  const el=document.getElementById('page-ai');
+  if(el.dataset.init) return;
+  el.dataset.init='1';
+  el.innerHTML=`<div class="page-head"><div><h2>AI Assistant</h2><p>Audit &amp; tax copilot · natural-language queries, drafting &amp; analysis (mock mode until an AI key is configured)</p></div></div>
+    <div class="card pad" style="margin-bottom:14px"><div style="display:flex;gap:8px">
+      <input id="nlqIn" placeholder='Natural-language query, e.g. "show all clients with overdue VAT returns"' style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:8px">
+      <button class="btn" onclick="nlqRun()">Search</button></div><div id="nlqResult" style="margin-top:10px"></div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <button class="pill" onclick="quickAsk('Variance exists between the VAT return and the ledger')">Explain a variance</button>
+      <button class="pill" onclick="quickAsk('Suggest audit procedures for revenue testing')">Suggest procedures</button>
+      <button class="pill" onclick="quickAsk('Draft a management letter point on weak bank reconciliation controls')">Draft ML point</button>
+      <button class="pill" onclick="quickAsk('Flag Tanzanian tax compliance risks this month')">Tax risks</button></div>
+    <div class="card"><div class="chat-log" id="chatLog"></div>
+      <div style="display:flex;gap:10px;padding:12px;border-top:1px solid var(--border)">
+        <input id="chatIn" style="flex:1;padding:10px 13px;border:1px solid var(--border);border-radius:9px" placeholder="Ask about findings, ratios, risks, tax compliance…">
+        <button class="btn primary" onclick="sendChat()">Send</button></div></div>`;
+  addMsg('ai','Hello — I can help with audit findings, ratio analysis, risk identification, drafting comments/management-letter points, and Tanzanian tax compliance. Use the search bar above for natural-language queries like "clients with overdue VAT".');
+  document.getElementById('chatIn').addEventListener('keydown',e=>{if(e.key==='Enter')sendChat();});
+  document.getElementById('nlqIn').addEventListener('keydown',e=>{if(e.key==='Enter')nlqRun();});
+}
+function quickAsk(t){ const i=document.getElementById('chatIn'); if(!i)return; i.value=t; sendChat(); }
+async function nlqRun(){
+  const v=document.getElementById('nlqIn').value.trim(); if(!v)return;
+  const box=document.getElementById('nlqResult'); box.innerHTML='Searching…';
+  try{ const {data}=await api('/ai/nlq',{method:'POST',body:JSON.stringify({q:v})});
+    box.innerHTML=`<div style="font-size:12.5px;color:var(--muted);margin-bottom:6px">${esc(data.summary)}</div>`+
+      (data.rows.length?`<div style="overflow:auto"><table><thead><tr>${data.columns.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${data.rows.map(r=>`<tr>${r.map(c=>`<td>${esc(String(c==null?'':c))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`:'');
+  }catch(e){ box.innerHTML=`<span style="color:var(--red)">${esc(e.message)}</span>`; }
+}
+function addMsg(who,text){const log=document.getElementById('chatLog');const d=document.createElement('div');d.className='msg '+who;d.textContent=text;log.appendChild(d);log.scrollTop=log.scrollHeight;}
+async function sendChat(){
+  const inp=document.getElementById('chatIn');const v=inp.value.trim();if(!v)return;addMsg('me',v);inp.value='';
+  const tmp=document.createElement('div');tmp.className='msg ai';tmp.textContent='…';document.getElementById('chatLog').appendChild(tmp);
+  try{ const {data}=await api('/ai/chat',{method:'POST',body:JSON.stringify({prompt:v})}); tmp.textContent=data.text; }
+  catch(e){ tmp.textContent='Error: '+e.message; }
+  document.getElementById('chatLog').scrollTop=1e9;
+}
+
+/* ---------------- Smart search ---------------- */
+document.getElementById('globalSearch').addEventListener('keydown',async e=>{
+  if(e.key!=='Enter')return; const term=e.target.value.trim(); if(term.length<2){toast('Type at least 2 characters');return;}
+  const m=document.getElementById('searchModal'); document.getElementById('sr_body').innerHTML='Searching…'; m.classList.add('open');
+  try{
+    const {data}=await api('/search?q='+encodeURIComponent(term));
+    const sec=(title,items,render)=>items.length?`<div style="margin-bottom:12px"><div class="sub" style="margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px">${title}</div>${items.map(render).join('')}</div>`:'';
+    const html=
+      sec('Clients',data.clients,c=>`<div class="row-item">${esc(c.name)} <span class="tag">${esc(c.category)}</span></div>`)+
+      sec('Tasks',data.tasks,t=>`<div class="row-item">${esc(t.title)} ${statusChip(t.status)}</div>`)+
+      sec('Documents',data.documents,d=>`<div class="row-item">${esc(d.name)}</div>`)+
+      sec('Invoices',data.invoices,i=>`<div class="row-item">${esc(i.number||'')} · ${accMoney(i.total)} ${statusChip(i.status)}</div>`)+
+      sec('Tax deadlines',data.deadlines,o=>`<div class="row-item">${esc(o.type)} ${esc(o.period||'')} · ${esc(String(o.due_date).slice(0,10))} ${statusChip(o.status)}</div>`);
+    document.getElementById('sr_body').innerHTML=html||'<span style="color:var(--muted)">No matches found.</span>';
+  }catch(ex){ document.getElementById('sr_body').innerHTML=`<span style="color:var(--red)">${esc(ex.message)}</span>`; }
+});
+
+/* ---------------- Notifications ---------------- */
+async function loadNotifications(){
+  try{ const {data,meta}=await api('/notifications'); const c=document.getElementById('notifCount');
+    if(meta.unread>0){ c.style.display='flex'; c.textContent=meta.unread; } else c.style.display='none';
+    document.getElementById('notifBtn').onclick=async()=>{
+      const lines=data.slice(0,8).map(n=>`• ${n.title}`).join('\n')||'No notifications';
+      alert('Notifications\n\n'+lines); await api('/notifications/read-all',{method:'POST',body:JSON.stringify({})}); c.style.display='none'; };
+  }catch(e){}
+}
+
+/* ---------------- AI Risk Center ---------------- */
+function chipForLevel(l){const m={critical:'c-red',high:'c-red',medium:'c-amber',low:'c-green'};return `<span class="chip ${m[l]||'c-grey'}">${esc(l||'')}</span>`;}
+async function renderAIRisk(){
+  const el=document.getElementById('page-airisk');
+  el.innerHTML=`<div class="page-head"><div><h2>AI Risk Center</h2><p>Data-driven client risk scoring &amp; heatmap</p></div><button class="btn primary" onclick="recomputeRisk()">Recompute risk</button></div><div id="riskBody">Loading…</div>`;
+  loadRisk();
+}
+async function loadRisk(){
+  try{ const {data}=await api('/ai/risk/center');
+    if(!data.clients.length){ document.getElementById('riskBody').innerHTML='<div class="card pad" style="color:var(--muted)">No risk scores yet. Click <b>Recompute risk</b> to score all clients.</div>'; return; }
+    const cats=data.heatmap.categories;
+    const heat=v=>v>=75?'#b3402f':v>=50?'#d98c3a':v>=25?'#C8A24B':'#2e7d57';
+    document.getElementById('riskBody').innerHTML=`<div class="card"><div class="card-head"><h3>Risk heatmap</h3><span class="sub">${data.clients.length} clients scored</span></div><div style="overflow:auto"><table><thead><tr><th>Client</th><th>Score</th><th>Level</th>${cats.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>
+      ${data.heatmap.rows.map(r=>`<tr><td>${esc(r.client)}</td><td><b>${r.score}</b></td><td>${chipForLevel(r.level)}</td>${r.cells.map(v=>`<td style="text-align:center"><span style="display:inline-block;min-width:32px;padding:2px 6px;border-radius:6px;color:#fff;font-weight:700;font-size:11px;background:${heat(v)}">${v}</span></td>`).join('')}</tr>`).join('')}
+      </tbody></table></div></div>`;
+  }catch(e){ document.getElementById('riskBody').innerHTML=`<div class="card pad" style="color:var(--red)">${esc(e.message)}</div>`; }
+}
+async function recomputeRisk(){ try{ const {data}=await api('/ai/risk/recompute',{method:'POST',body:JSON.stringify({})}); toast(`Scored ${data.count} clients`); loadRisk(); }catch(e){ toast(e.message);} }
+
+/* ---------------- AI Analytics ---------------- */
+let anaClients=[];
+async function renderAIAnalytics(){
+  const el=document.getElementById('page-aianalytics');
+  el.innerHTML=`<div class="page-head"><div><h2>AI Analytics</h2><p>Financial ratio analysis with AI commentary</p></div>
+    <select id="anaClient" onchange="loadAnalytics()" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;max-width:240px"></select></div><div id="anaBody">Loading…</div>`;
+  try{ const cl=await api('/clients'); anaClients=cl.data; document.getElementById('anaClient').innerHTML=anaClients.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join(''); loadAnalytics(); }
+  catch(e){ document.getElementById('anaBody').innerHTML=`<div class="card pad" style="color:var(--red)">${esc(e.message)}</div>`; }
+}
+async function loadAnalytics(){
+  const cid=(document.getElementById('anaClient')||{}).value; if(!cid)return;
+  const body=document.getElementById('anaBody'); body.innerHTML='Loading…';
+  try{ const {data}=await api('/ai/financial-analysis/'+cid);
+    if(!data.hasData){ body.innerHTML=`<div class="card pad" style="color:var(--muted)">${esc(data.message||'No data')}</div>`; return; }
+    const m=data.metrics;
+    body.innerHTML=`<div class="grid kpis" style="margin-bottom:16px">
+      ${aKpi('Revenue',tzs(m.revenue))}${aKpi('Net profit',tzs(m.netProfit))}${aKpi('Net margin',m.netMargin+'%')}${aKpi('Current ratio',m.currentRatio==null?'—':m.currentRatio)}</div>
+      <div class="grid cols2" style="margin-bottom:16px"><div class="card"><div class="card-head"><h3>Performance</h3></div><div class="pad"><div class="chart-box"><canvas id="anaPerf"></canvas></div></div></div>
+      <div class="card"><div class="card-head"><h3>Financial position</h3></div><div class="pad"><div class="chart-box"><canvas id="anaPos"></canvas></div></div></div></div>
+      <div class="card"><div class="card-head"><h3>AI commentary</h3></div><div class="pad" style="white-space:pre-wrap;font-size:13px;line-height:1.6">${esc(data.commentary||'(connect an AI key for narrative commentary)')}</div></div>`;
+    if(charts.anaPerf)charts.anaPerf.destroy(); if(charts.anaPos)charts.anaPos.destroy();
+    charts.anaPerf=new Chart(document.getElementById('anaPerf'),{type:'bar',data:{labels:data.charts.performance.labels,datasets:[{data:data.charts.performance.values,backgroundColor:['#1E3A5F','#b3402f','#2e7d57'],borderRadius:5}]},options:{maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+    charts.anaPos=new Chart(document.getElementById('anaPos'),{type:'doughnut',data:{labels:data.charts.position.labels,datasets:[{data:data.charts.position.values,backgroundColor:['#1E3A5F','#C8A24B','#2c6fb3'],borderWidth:0}]},options:{maintainAspectRatio:false,cutout:'60%',plugins:{legend:{position:'bottom'}}}});
+  }catch(e){ body.innerHTML=`<div class="card pad" style="color:var(--red)">${esc(e.message)}</div>`; }
+}
+function aKpi(label,val){return `<div class="card kpi"><div class="v">${val}</div><div class="l">${label}</div></div>`;}
+
+/* ---------------- AI Recommendations ---------------- */
+async function renderAIRecs(){
+  const el=document.getElementById('page-airecs');
+  el.innerHTML=`<div class="page-head"><div><h2>AI Recommendations</h2><p>Open items from the risk, anomaly, accounting &amp; workflow engines</p></div>
+    <button class="btn primary" onclick="scanAll()">Run scans</button></div><div class="card" id="recsBody">Loading…</div>`;
+  loadRecs();
+}
+async function loadRecs(){
+  try{ const {data}=await api('/ai/recommendations');
+    document.getElementById('recsBody').innerHTML=`<table><thead><tr><th>Type</th><th>Title</th><th>Client</th><th>Severity</th><th></th></tr></thead><tbody>
+      ${data.map(r=>`<tr><td><span class="tag">${esc(r.type)}</span></td><td>${esc(r.title)}</td><td>${esc(r.client_name||'—')}</td><td>${chipForLevel(r.severity)}</td>
+        <td style="white-space:nowrap"><button class="btn" onclick="recStatus('${r.id}','accepted')">Accept</button> <button class="btn" onclick="recStatus('${r.id}','dismissed')">Dismiss</button></td></tr>`).join('')
+        ||'<tr><td colspan="5" style="color:var(--muted)">No open recommendations. Click <b>Run scans</b> to generate them.</td></tr>'}</tbody></table>`;
+  }catch(e){ document.getElementById('recsBody').innerHTML=`<div class="pad" style="color:var(--red)">${esc(e.message)}</div>`; }
+}
+async function recStatus(id,st){ try{ await api('/ai/recommendations/'+id+'/status',{method:'POST',body:JSON.stringify({status:st})}); toast('Updated'); loadRecs(); }catch(e){ toast(e.message);} }
+async function scanAll(){ try{ toast('Running engines…'); await api('/ai/risk/recompute',{method:'POST',body:JSON.stringify({})}); await api('/ai/anomalies/scan',{method:'POST',body:JSON.stringify({})}); toast('Scans complete'); loadRecs(); }catch(e){ toast(e.message);} }
+
+/* ---------------- boot ---------------- */
+(async function(){
+  try{ const me=await api('/auth/me'); USER=me.data; localStorage.setItem('cassian_user',JSON.stringify(USER)); }
+  catch(e){ return; }
+  document.getElementById('userAvatar').textContent=initials(USER.full_name);
+  document.getElementById('userAvatar').title=USER.full_name+' · '+USER.role;
+  loadNotifications();
+  const start=(location.hash||'#dashboard').slice(1);
+  go(renderers[start]?start:'dashboard');
+})();
+</script>
+</body>
+</html>

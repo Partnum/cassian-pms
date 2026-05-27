@@ -1,0 +1,155 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="860" viewBox="0 0 1180 860" font-family="Segoe UI, Arial, sans-serif">
+  <rect width="1180" height="860" fill="#f4f6f9"/>
+  <!-- Header -->
+  <rect x="0" y="0" width="1180" height="64" fill="#1E3A5F"/>
+  <rect x="0" y="60" width="1180" height="4" fill="#C8A24B"/>
+  <text x="30" y="40" fill="#ffffff" font-size="22" font-weight="700">Cassian PMS — PostgreSQL Schema Map</text>
+  <text x="1150" y="40" fill="#C8A24B" font-size="13" text-anchor="end">50+ tables · UUID PKs · firm-scoped · soft deletes · audit trail</text>
+
+  <!-- legend helper -->
+  <style>
+    .card{fill:#ffffff;stroke:#e2e8f0;stroke-width:1;rx:10}
+    .hd{fill:#1E3A5F}
+    .ht{fill:#ffffff;font-size:13.5px;font-weight:700}
+    .tb{fill:#1c2733;font-size:11px}
+    .dot{fill:#C8A24B}
+  </style>
+
+  <!-- ===== Row 1 ===== -->
+  <!-- A Auth -->
+  <g>
+    <rect x="30" y="92" width="360" height="232" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+    <rect x="30" y="92" width="360" height="30" rx="10" fill="#1E3A5F"/>
+    <rect x="30" y="107" width="360" height="15" fill="#1E3A5F"/>
+    <text x="44" y="112" class="ht">A · Users &amp; Authentication</text>
+    <g class="tb">
+      <text x="50" y="146">roles</text><text x="50" y="166">permissions</text>
+      <text x="50" y="186">role_permissions</text><text x="50" y="206">users</text>
+      <text x="220" y="146">user_sessions</text><text x="220" y="166">login_history</text>
+      <text x="220" y="186">password_reset_tokens</text><text x="220" y="206">user_client_access</text>
+    </g>
+    <text x="50" y="246" fill="#697586" font-size="10.5">JWT · bcrypt · RBAC · row-level scoping</text>
+  </g>
+  <!-- B Clients -->
+  <g>
+    <rect x="410" y="92" width="360" height="232" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+    <rect x="410" y="92" width="360" height="30" rx="10" fill="#1E3A5F"/>
+    <rect x="410" y="107" width="360" height="15" fill="#1E3A5F"/>
+    <text x="424" y="112" class="ht">B · Client Management</text>
+    <g class="tb">
+      <text x="430" y="146">clients</text><text x="430" y="166">client_contacts</text>
+      <text x="430" y="186">client_addresses</text>
+      <text x="600" y="146">client_services</text><text x="600" y="166">client_drive_links</text>
+    </g>
+    <text x="430" y="226" fill="#697586" font-size="10.5">company_name · TIN · VRN · assigned</text>
+    <text x="430" y="242" fill="#697586" font-size="10.5">manager/partner · Google Drive folder</text>
+  </g>
+  <!-- C Audit -->
+  <g>
+    <rect x="790" y="92" width="360" height="232" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+    <rect x="790" y="92" width="360" height="30" rx="10" fill="#1E3A5F"/>
+    <rect x="790" y="107" width="360" height="15" fill="#1E3A5F"/>
+    <text x="804" y="112" class="ht">C · Audit Workflow</text>
+    <g class="tb">
+      <text x="810" y="146">audit_engagements</text><text x="810" y="166">audit_stages</text>
+      <text x="810" y="186">audit_workflow_history</text><text x="810" y="206">audit_tasks</text>
+      <text x="980" y="146">audit_reviews</text><text x="980" y="166">audit_comments</text>
+      <text x="980" y="186">audit_findings</text><text x="980" y="206">audit_signoffs</text>
+    </g>
+    <text x="810" y="246" fill="#697586" font-size="10.5">9-stage flow · role-gated transitions</text>
+  </g>
+
+  <!-- ===== Row 2 ===== -->
+  <!-- D Documents -->
+  <g>
+    <rect x="30" y="346" width="360" height="200" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+    <rect x="30" y="346" width="360" height="30" rx="10" fill="#1E3A5F"/>
+    <rect x="30" y="361" width="360" height="15" fill="#1E3A5F"/>
+    <text x="44" y="366" class="ht">D · Document Management</text>
+    <g class="tb">
+      <text x="50" y="400">document_categories</text><text x="50" y="420">documents</text>
+      <text x="50" y="440">document_versions</text><text x="50" y="460">document_access_logs</text>
+    </g>
+    <text x="50" y="500" fill="#697586" font-size="10.5">Google Drive / local · versions · OCR</text>
+    <text x="50" y="516" fill="#697586" font-size="10.5">full-text search (GIN) · access logs</text>
+  </g>
+  <!-- E Tasks -->
+  <g>
+    <rect x="410" y="346" width="360" height="200" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+    <rect x="410" y="346" width="360" height="30" rx="10" fill="#1E3A5F"/>
+    <rect x="410" y="361" width="360" height="15" fill="#1E3A5F"/>
+    <text x="424" y="366" class="ht">E · Tasks, Calendar &amp; Reminders</text>
+    <g class="tb">
+      <text x="430" y="400">tasks</text><text x="430" y="420">task_comments</text>
+      <text x="430" y="440">task_attachments</text>
+      <text x="600" y="400">calendar_events</text><text x="600" y="420">reminders</text>
+      <text x="600" y="440">notifications</text>
+    </g>
+    <text x="430" y="500" fill="#697586" font-size="10.5">deadlines · recurring · overdue tracking</text>
+    <text x="430" y="516" fill="#697586" font-size="10.5">email + in-app notifications</text>
+  </g>
+  <!-- F Accounting -->
+  <g>
+    <rect x="790" y="346" width="360" height="200" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+    <rect x="790" y="346" width="360" height="30" rx="10" fill="#1E3A5F"/>
+    <rect x="790" y="361" width="360" height="15" fill="#1E3A5F"/>
+    <text x="804" y="366" class="ht">F · Accounting</text>
+    <g class="tb">
+      <text x="810" y="398">chart_of_accounts</text><text x="810" y="416">journal_entries</text>
+      <text x="810" y="434">journal_lines</text><text x="810" y="452">ledgers</text>
+      <text x="980" y="398">trial_balance</text><text x="980" y="416">bank_accounts</text>
+      <text x="980" y="434">bank_transactions</text><text x="980" y="452">bank_reconciliations</text>
+    </g>
+    <text x="810" y="492" fill="#697586" font-size="10.5">double-entry · TZS/USD · VAT</text>
+  </g>
+
+  <!-- ===== Row 3 ===== -->
+  <!-- G Tax -->
+  <g>
+    <rect x="30" y="568" width="360" height="232" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+    <rect x="30" y="568" width="360" height="30" rx="10" fill="#1E3A5F"/>
+    <rect x="30" y="583" width="360" height="15" fill="#1E3A5F"/>
+    <text x="44" y="588" class="ht">G · Tax Compliance</text>
+    <g class="tb">
+      <text x="50" y="622">statutory_deadlines</text><text x="50" y="642">tax_returns</text>
+      <text x="50" y="662">tra_submissions</text><text x="50" y="682">vat_returns</text>
+      <text x="220" y="622">paye_returns</text><text x="220" y="642">wcf_returns</text>
+      <text x="220" y="662">nssf_returns</text><text x="220" y="682">pdpc_compliance</text>
+    </g>
+    <text x="50" y="722" fill="#697586" font-size="10.5">TRA · NSSF · WCF · PDPC</text>
+    <text x="50" y="738" fill="#697586" font-size="10.5">filing dates · payment tracking · alerts</text>
+  </g>
+  <!-- H AI -->
+  <g>
+    <rect x="410" y="568" width="360" height="232" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+    <rect x="410" y="568" width="360" height="30" rx="10" fill="#1E3A5F"/>
+    <rect x="410" y="583" width="360" height="15" fill="#1E3A5F"/>
+    <text x="424" y="588" class="ht">H · AI Module</text>
+    <g class="tb">
+      <text x="430" y="622">ai_logs</text><text x="430" y="642">ai_queries</text>
+      <text x="430" y="662">ai_recommendations</text>
+      <text x="600" y="622">ai_risk_analysis</text>
+      <text x="600" y="642">anomaly_detection_results</text>
+    </g>
+    <text x="430" y="702" fill="#697586" font-size="10.5">findings · risk · ratio analysis</text>
+    <text x="430" y="718" fill="#697586" font-size="10.5">anomaly detection · smart search</text>
+  </g>
+  <!-- I Reporting/System -->
+  <g>
+    <rect x="790" y="568" width="360" height="232" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+    <rect x="790" y="568" width="360" height="30" rx="10" fill="#1E3A5F"/>
+    <rect x="790" y="583" width="360" height="15" fill="#1E3A5F"/>
+    <text x="804" y="588" class="ht">I · Reporting &amp; System</text>
+    <g class="tb">
+      <text x="810" y="622">reports</text><text x="810" y="642">report_templates</text>
+      <text x="810" y="662">exported_reports</text>
+      <text x="980" y="622">activity_log</text><text x="980" y="642">app_settings</text>
+    </g>
+    <text x="810" y="702" fill="#697586" font-size="10.5">immutable audit trail · Drive tokens</text>
+    <text x="810" y="718" fill="#697586" font-size="10.5">Excel / PDF export</text>
+  </g>
+
+  <!-- FIRMS / CLIENTS spine note -->
+  <text x="30" y="834" fill="#697586" font-size="11">Every business table carries firm_id (multi-tenant) and most carry client_id. Views: v_client_overview, v_engagement_progress, v_upcoming_deadlines.</text>
+  <text x="30" y="852" fill="#697586" font-size="11">Diagram is a module map; see ERD.mermaid for full entity relationships.</text>
+</svg>
