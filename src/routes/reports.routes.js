@@ -6,7 +6,7 @@ const { q, one } = require('../config');
 const { requirePermission, scopeClientIds, asyncHandler } = require('../auth');
 
 function inClause(field, ids) {
-  if (ids === '*') return { sql: '1=1', params: [] };
+  if (ids === '*') return { sql: `${field} IN (SELECT id FROM clients WHERE deleted_at IS NULL)`, params: [] };
   if (!ids.length) return { sql: '1=0', params: [] };
   return { sql: `${field} IN (${ids.map(() => '?').join(',')})`, params: ids };
 }

@@ -23,7 +23,7 @@ async function taskScope(req) {
 // List tasks
 router.get('/tasks', requirePermission('task.read'), asyncHandler(async (req, res) => {
   const { clause, params } = await taskScope(req);
-  let where = clause; const p = [...params];
+  let where = clause + ' AND (t.client_id IS NULL OR c.deleted_at IS NULL)'; const p = [...params];
   if (req.query.status) { where += ' AND t.status=?'; p.push(req.query.status); }
   if (req.query.mine === '1') { where += ' AND t.assignee_id=?'; p.push(req.user.id); }
   const rows = await q(`${TASK_SELECT} WHERE ${where} ORDER BY (t.status='done')::int, (t.due_date IS NULL)::int, t.due_date`, p);

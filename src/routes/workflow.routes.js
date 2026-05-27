@@ -33,7 +33,7 @@ function progressFor(index) {
 
 router.get('/', requirePermission('engagement.read'), asyncHandler(async (req, res) => {
   const ids = await scopeClientIds(req.user);
-  let where = 'e.firm_id=?'; const params = [req.user.firmId];
+  let where = 'e.firm_id=? AND c.deleted_at IS NULL'; const params = [req.user.firmId];
   if (ids !== '*') {
     if (ids.length === 0) return res.json({ data: [] });
     where += ` AND e.client_id IN (${ids.map(() => '?').join(',')})`;

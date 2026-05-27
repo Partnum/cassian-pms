@@ -9,7 +9,7 @@ const { runReminderScan } = require('../services/notifications.service');
 
 async function scopeClause(req, alias = 'o') {
   const ids = await scopeClientIds(req.user);
-  if (ids === '*') return { clause: `${alias}.firm_id=?`, params: [req.user.firmId], empty: false };
+  if (ids === '*') return { clause: `${alias}.firm_id=? AND ${alias}.client_id IN (SELECT id FROM clients WHERE deleted_at IS NULL)`, params: [req.user.firmId], empty: false };
   if (ids.length === 0) return { clause: '1=0', params: [], empty: true };
   return { clause: `${alias}.firm_id=? AND ${alias}.client_id IN (${ids.map(() => '?').join(',')})`, params: [req.user.firmId, ...ids], empty: false };
 }
