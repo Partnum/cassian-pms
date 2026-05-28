@@ -4,7 +4,34 @@ const express = require('express');
 const router = express.Router();
 const { q, one, uuid } = require('../config');
 const { requirePermission, scopeClientIds, canAccessClient, logActivity, asyncHandler } = require('../auth');
-const { CLIENT_CATEGORIES } = require('../constants');
+const { CLIENT_CATEGORIES, WORKFLOW_STAGES } = require('../constants');
+
+/**
+ * Auto-create a kickoff engagement so a freshly added client appears immediately
+ * in the Workflow page (this was the user-reported gap: "added client but they
+ * don't show up in audit work"). Only fires for engagement-driven categories.
+ */
+async function autoCreateEngagement(req, clientId, category, partnerId, managerId) {
+  if (!['Audit', 'Tax', 'Accounting'].includes(category)) return null;
+  const id = uuid();
+  const yr = new Date().getFullYear();
+  await q(
+    `INSERT INTO audit_engagements (id, firm_id, client_id, type, financial_year, period_start, period_end,
+       partner_id, manager_id, status, current_stage, progress_pct, fee_currency)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [id, req.user.firmId, clientId, category, yr, `${yr}-01-01`, `${yr}-12-31`,
+      partnerId || null, managerId || null, 'In progress', 'Planning', 0, 'TZS']
+  );
+  for (let i = 0; i < WORKFLOW_STAGES.length; i++) {
+    await q(
+      'INSERT INTO audit_stages (id, engagement_id, sequence, name, status, progress_pct) VALUES (?,?,?,?,?,?)',
+      [uuid(), id, i + 1, WORKFLOW_STAGES[i], i === 0 ? 'in_progress' : 'not_started', 0]
+    );
+  }
+  await q('INSERT INTO audit_workflow_history (id, engagement_id, to_stage, action, changed_by) VALUES (?,?,?,?,?)',
+    [uuid(), id, 'Planning', 'create', req.user.id]);
+  return id;
+}
 
 const SELECT = `
   SELECT c.*, pu.full_name AS partner_name, mu.full_name AS manager_name
@@ -71,7 +98,10 @@ router.post('/', requirePermission('client.create'), asyncHandler(async (req, re
       b.manager_id || null, b.status || 'Active']
   );
   await logActivity(req, 'create', 'client', id, { name: b.name });
-  res.status(201).json({ data: { id } });
+  // Auto-create kickoff engagement so the client shows in the Workflow page right away.
+  let engagement_id = null;
+  try { engagement_id = await autoCreateEngagement(req, id, b.category, b.engagement_partner_id, b.manager_id); } catch (e) { /* non-fatal */ }
+  res.status(201).json({ data: { id, engagement_id } });
 }));
 
 // Update
