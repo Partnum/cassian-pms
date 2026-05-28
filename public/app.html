@@ -126,6 +126,10 @@
         <button class="btn" onclick="logout()">Sign out</button>
       </div>
     </header>
+    <div id="notifPanel" style="position:fixed;top:66px;right:18px;width:340px;max-height:480px;overflow:auto;background:var(--card);border:1px solid var(--border);border-radius:11px;box-shadow:var(--shadow);z-index:25;display:none">
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center"><b style="font-size:13px">Notifications</b><a href="#" id="notifReadAll" style="font-size:12px;color:var(--navy)">Mark all read</a></div>
+      <div id="notifList" style="padding:4px 0">Loading…</div>
+    </div>
     <div class="content">
       <section class="page active" id="page-dashboard"></section>
       <section class="page" id="page-clients"></section>
@@ -184,7 +188,7 @@
 <!-- Client detail + comments modal -->
 <div class="modal-bg" id="clientDetail">
   <div class="modal" style="max-width:720px;width:100%">
-    <div class="modal-head"><h3 id="cd_title" style="font-size:16px;font-weight:700">Client</h3><button class="btn" onclick="closeClientDetail()">✕</button></div>
+    <div class="modal-head"><h3 id="cd_title" style="font-size:16px;font-weight:700">Client</h3><div style="display:flex;gap:8px"><button class="btn" id="cd_editBtn" onclick="cdEdit()" style="display:none">Edit</button><button class="btn" onclick="closeClientDetail()">✕</button></div></div>
     <div class="pad" id="cd_info"></div>
     <div class="pad" id="cd_team" style="padding-top:0"></div>
     <div class="pad" style="padding-top:0">
@@ -789,9 +793,36 @@ async function viewClient(id){
       <span><b style="color:var(--text)">Manager:</b> ${esc(c.manager_name||'—')}</span>
       <span><b style="color:var(--text)">Status:</b> ${esc(c.status||'—')}</span></div>`;
     document.getElementById('cd_tabs').innerHTML=['general','audit','tax','accounting'].map(a=>`<span class="pill ${a===CD.area?'active':''}" data-a="${a}" onclick="cdGo('${a}')">${a[0].toUpperCase()+a.slice(1)}</span>`).join('');
+    const eb=document.getElementById('cd_editBtn'); if(eb) eb.style.display=(USER&&['Admin','Partner','Manager'].includes(USER.role))?'inline-flex':'none';
     document.getElementById('clientDetail').classList.add('open');
     cdLoad(); cdLoadTeam();
   }catch(e){ toast(e.message); }
+}
+function cdEdit(){
+  const c=CD.client; if(!c) return;
+  document.getElementById('cd_info').innerHTML=`<div class="g2">
+    <div class="field"><label>Name</label><input id="ce_name" value="${esc(c.name||'')}"></div>
+    <div class="field"><label>Category</label><select id="ce_cat"><option ${c.category==='Audit'?'selected':''}>Audit</option><option ${c.category==='Tax'?'selected':''}>Tax</option><option ${c.category==='Accounting'?'selected':''}>Accounting</option><option ${c.category==='Consultancy'?'selected':''}>Consultancy</option></select></div></div>
+    <div class="g2"><div class="field"><label>TIN</label><input id="ce_tin" value="${esc(c.tin||'')}"></div>
+    <div class="field"><label>VRN</label><input id="ce_vrn" value="${esc(c.vrn||'')}"></div></div>
+    <div class="g2"><div class="field"><label>Sector</label><input id="ce_sector" value="${esc(c.sector||'')}"></div>
+    <div class="field"><label>Financial year-end</label><input id="ce_fye" value="${esc(c.financial_year_end||'')}" placeholder="31 December"></div></div>
+    <div class="g2"><div class="field"><label>Contact name</label><input id="ce_cname" value="${esc(c.contact_name||'')}"></div>
+    <div class="field"><label>Contact email</label><input id="ce_email" value="${esc(c.contact_email||'')}"></div></div>
+    <div class="g2"><div class="field"><label>Contact phone</label><input id="ce_phone" value="${esc(c.contact_phone||'')}"></div>
+    <div class="field"><label>Status</label><select id="ce_status"><option ${c.status==='Active'?'selected':''}>Active</option><option ${c.status==='Inactive'?'selected':''}>Inactive</option><option ${c.status==='Prospect'?'selected':''}>Prospect</option></select></div></div>
+    <div class="field"><label>Physical address</label><input id="ce_addr" value="${esc(c.physical_address||'')}"></div>
+    <div style="display:flex;gap:10px;margin-top:6px"><button class="btn primary" onclick="cdSave()">Save changes</button><button class="btn" onclick="viewClient('${c.id}')">Cancel</button></div>`;
+}
+async function cdSave(){
+  const id=CD.client && CD.client.id; if(!id) return;
+  const body={ name:val('ce_name'), category:val('ce_cat'), tin:val('ce_tin')||null, vrn:val('ce_vrn')||null,
+    sector:val('ce_sector')||null, financial_year_end:val('ce_fye')||null,
+    contact_name:val('ce_cname')||null, contact_email:val('ce_email')||null, contact_phone:val('ce_phone')||null,
+    status:val('ce_status'), physical_address:val('ce_addr')||null };
+  if(!body.name){ toast('Name is required'); return; }
+  try{ await api('/clients/'+id,{method:'PATCH',body:JSON.stringify(body)}); toast('Client updated'); viewClient(id); renderClients(); }
+  catch(e){ toast(e.message); }
 }
 function closeClientDetail(){ document.getElementById('clientDetail').classList.remove('open'); }
 function cdGo(a){ CD.area=a; document.querySelectorAll('#cd_tabs .pill').forEach(p=>p.classList.toggle('active',p.dataset.a===a)); cdLoad(); }
@@ -1171,7 +1202,7 @@ async function renderTax(){
   const el=document.getElementById('page-tax');
   const canEdit=USER&&['Admin','Partner','Manager','Tax Consultant','Accountant'].includes(USER.role);
   el.innerHTML=`<div class="page-head"><div><h2>Tax Compliance</h2><p>TRA · NSSF · WCF · PDPC obligations</p></div>
-    <div style="display:flex;gap:8px">${canEdit?'<button class="btn primary" onclick="newObligation()">+ New obligation</button>':''}<button class="btn" onclick="runScan()">Run reminder scan</button></div></div>
+    <div style="display:flex;gap:8px">${canEdit?'<button class="btn primary" onclick="newObligation()">+ New obligation</button><button class="btn" onclick="generateMonthly()">Auto-generate next month</button>':''}<button class="btn" onclick="runScan()">Run reminder scan</button></div></div>
     <div id="taxFormBox"></div>
     <div class="card" id="taxTable">Loading…</div>`;
   try{ const {data}=await api('/tax/obligations');
@@ -1205,6 +1236,14 @@ async function createObligation(){
   catch(e){ toast(e.message); }
 }
 async function markFiled(id){ try{ await api('/tax/obligations/'+id,{method:'PATCH',body:JSON.stringify({status:'filed'})}); toast('Marked filed'); renderTax(); }catch(e){ toast(e.message);} }
+async function generateMonthly(){
+  const p=prompt('Generate standard PAYE / SDL / NSSF / WCF / VAT obligations for which period? (YYYY-MM, leave blank for next month)');
+  if(p===null) return;
+  const body=p?{period:p.trim()}:{};
+  try{ const {data}=await api('/tax/obligations/generate-monthly',{method:'POST',body:JSON.stringify(body)});
+    toast(`Period ${data.period}: ${data.created} created, ${data.skipped} skipped (${data.clients} clients)`); renderTax();
+  }catch(e){ toast(e.message); }
+}
 async function runScan(){ try{ const {data}=await api('/tax/scan',{method:'POST',body:JSON.stringify({})}); toast(`Scan: ${data.notifications} alerts, ${data.obligationsOverdue} overdue`); loadNotifications(); }catch(e){ toast(e.message);} }
 
 /* ---------------- AI ---------------- */
@@ -1265,14 +1304,44 @@ document.getElementById('globalSearch').addEventListener('keydown',async e=>{
 });
 
 /* ---------------- Notifications ---------------- */
+let _notifData=[];
 async function loadNotifications(){
-  try{ const {data,meta}=await api('/notifications'); const c=document.getElementById('notifCount');
-    if(meta.unread>0){ c.style.display='flex'; c.textContent=meta.unread; } else c.style.display='none';
-    document.getElementById('notifBtn').onclick=async()=>{
-      const lines=data.slice(0,8).map(n=>`• ${n.title}`).join('\n')||'No notifications';
-      alert('Notifications\n\n'+lines); await api('/notifications/read-all',{method:'POST',body:JSON.stringify({})}); c.style.display='none'; };
+  try{ const {data,meta}=await api('/notifications'); _notifData=data||[];
+    const c=document.getElementById('notifCount');
+    if(meta && meta.unread>0){ c.style.display='flex'; c.textContent=meta.unread; } else c.style.display='none';
+    renderNotifList();
+    const btn=document.getElementById('notifBtn'), panel=document.getElementById('notifPanel');
+    if(btn) btn.onclick=(ev)=>{ ev.stopPropagation(); panel.style.display=panel.style.display==='block'?'none':'block'; };
+    const all=document.getElementById('notifReadAll');
+    if(all) all.onclick=async(ev)=>{ ev.preventDefault(); try{ await api('/notifications/read-all',{method:'POST',body:JSON.stringify({})}); }catch(e){} loadNotifications(); };
   }catch(e){}
 }
+function renderNotifList(){
+  const list=document.getElementById('notifList'); if(!list) return;
+  if(!_notifData.length){ list.innerHTML='<div style="padding:18px;color:var(--muted);font-size:12.5px;text-align:center">No notifications yet.</div>'; return; }
+  list.innerHTML=_notifData.slice(0,40).map(n=>{
+    const cls=n.type==='warning'?'c-amber':n.type==='error'?'c-red':'c-blue';
+    const when=String(n.created_at||'').slice(0,16).replace('T',' ');
+    const unread=!n.is_read?'background:var(--blue-bg);':'';
+    return `<a href="${esc(n.link||'#')}" onclick="notifClick('${n.id}',event)" style="display:block;padding:10px 14px;border-bottom:1px solid var(--border);text-decoration:none;color:var(--text);${unread}">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b style="font-size:12.5px">${esc(n.title||'')}</b><span class="chip ${cls}" style="font-size:10px">${esc(n.type||'info')}</span></div>
+      ${n.body?`<div style="color:var(--muted);font-size:11.5px;margin-top:3px">${esc(n.body)}</div>`:''}
+      <div style="color:var(--muted);font-size:10.5px;margin-top:3px">${esc(when)}</div></a>`;
+  }).join('');
+}
+async function notifClick(id,ev){
+  try{ await api('/notifications/'+id+'/read',{method:'POST',body:JSON.stringify({})}); }catch(e){}
+  // Let the link follow through if it's an in-app hash (#tasks etc.); otherwise just close.
+  const panel=document.getElementById('notifPanel'); if(panel) panel.style.display='none';
+  loadNotifications();
+}
+// Close the panel on outside click.
+document.addEventListener('click',(ev)=>{
+  const p=document.getElementById('notifPanel'), b=document.getElementById('notifBtn');
+  if(!p||p.style.display!=='block') return;
+  if(p.contains(ev.target)||(b&&b.contains(ev.target))) return;
+  p.style.display='none';
+});
 
 /* ---------------- AI Risk Center ---------------- */
 function chipForLevel(l){const m={critical:'c-red',high:'c-red',medium:'c-amber',low:'c-green'};return `<span class="chip ${m[l]||'c-grey'}">${esc(l||'')}</span>`;}

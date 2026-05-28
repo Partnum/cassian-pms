@@ -66,6 +66,58 @@ router.patch('/obligations/:id', requirePermission('tax.update'), asyncHandler(a
   res.json({ data: { ok: true } });
 }));
 
+// Bulk-generate standard Tanzanian monthly statutory obligations for every active client.
+// Body: { period?: 'YYYY-MM', client_id?: <uuid> }   (defaults: next month, all firm clients)
+// Creates PAYE/SDL/NSSF/WCF for every client, plus VAT for VRN-registered clients.
+router.post('/obligations/generate-monthly', requirePermission('tax.update'), asyncHandler(async (req, res) => {
+  const b = req.body || {};
+  let period = b.period;
+  if (!period) {
+    const d = new Date(); d.setMonth(d.getMonth() + 1);
+    period = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }
+  const m = /^(\d{4})-(\d{2})$/.exec(period);
+  if (!m) return res.status(400).json({ error: { code: 'BAD_INPUT', message: 'period must look like YYYY-MM' } });
+  const year = Number(m[1]), monthIdx = Number(m[2]) - 1;
+  const due = (day) => new Date(year, monthIdx + 1, day).toISOString().slice(0, 10);
+  const lastDayNext = new Date(year, monthIdx + 2, 0).toISOString().slice(0, 10);
+
+  const clauseSel = b.client_id
+    ? { sql: 'firm_id=? AND deleted_at IS NULL AND id=?', params: [req.user.firmId, b.client_id] }
+    : { sql: 'firm_id=? AND deleted_at IS NULL AND is_active=1', params: [req.user.firmId] };
+  const clients = await q(`SELECT id, name, vrn FROM clients WHERE ${clauseSel.sql}`, clauseSel.params);
+
+  const plan = (c) => {
+    const items = [
+      { type: 'PAYE', authority: 'TRA', due: due(7) },
+      { type: 'SDL', authority: 'TRA', due: due(7) },
+      { type: 'NSSF', authority: 'NSSF', due: lastDayNext },
+      { type: 'WCF', authority: 'WCF', due: lastDayNext },
+    ];
+    if (c.vrn) items.push({ type: 'VAT', authority: 'TRA', due: due(20) });
+    return items;
+  };
+
+  let created = 0, skipped = 0;
+  for (const c of clients) {
+    for (const it of plan(c)) {
+      const ex = await q(
+        'SELECT id FROM statutory_deadlines WHERE firm_id=? AND client_id=? AND type=? AND period=?',
+        [req.user.firmId, c.id, it.type, period]
+      );
+      if (ex.length) { skipped += 1; continue; }
+      await q(
+        `INSERT INTO statutory_deadlines (id, firm_id, client_id, type, authority, period, due_date, status)
+         VALUES (?,?,?,?,?,?,?,?)`,
+        [uuid(), req.user.firmId, c.id, it.type, it.authority, period, it.due, 'upcoming']
+      );
+      created += 1;
+    }
+  }
+  await logActivity(req, 'generate', 'obligations', null, { period, clients: clients.length, created, skipped });
+  res.json({ data: { period, clients: clients.length, created, skipped } });
+}));
+
 // Manually run the reminder scan (Admin / Partner)
 router.post('/scan', asyncHandler(async (req, res) => {
   if (!['Admin', 'Partner'].includes(req.user.role)) return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Admin/Partner only' } });
