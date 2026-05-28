@@ -130,11 +130,20 @@ router.get('/calendar', requirePermission('task.read'), asyncHandler(async (req,
        WHERE o.firm_id=? AND o.due_date BETWEEN ? AND ?`,
     [req.user.firmId, from, to]
   );
-  const events = await q('SELECT * FROM calendar_events WHERE firm_id=? AND start_at::date BETWEEN ? AND ?', [req.user.firmId, from, to]);
+  const events = await q(
+    `SELECT e.*, c.name AS client_name FROM calendar_events e
+       LEFT JOIN clients c ON c.id=e.client_id
+      WHERE e.firm_id=? AND e.start_at::date BETWEEN ? AND ?`,
+    [req.user.firmId, from, to]
+  );
   const items = [
-    ...tasks.map((t) => ({ kind: 'task', id: t.id, title: t.title, date: (t.due_date || '').slice(0, 10), status: t.status, priority: t.priority, client: t.client_name })),
-    ...obligations.map((o) => ({ kind: 'obligation', id: o.id, title: `${o.type} — ${o.client_name}`, date: o.due_date, status: o.status, authority: o.authority })),
-    ...events.map((e) => ({ kind: 'event', id: e.id, title: e.title, date: (e.start_at || '').slice(0, 10), color: e.color })),
+    ...tasks.map((t) => ({ kind: 'task', id: t.id, title: t.title, date: (t.due_date || '').slice(0, 10),
+      status: t.status, priority: t.priority, client_id: t.client_id, client_name: t.client_name })),
+    ...obligations.map((o) => ({ kind: 'obligation', id: o.id, title: `${o.type} — ${o.client_name}`,
+      date: o.due_date, status: o.status, authority: o.authority, type: o.type,
+      client_id: o.client_id, client_name: o.client_name })),
+    ...events.map((e) => ({ kind: 'event', id: e.id, title: e.title, date: (e.start_at || '').slice(0, 10),
+      color: e.color, event_type: e.type, client_id: e.client_id, client_name: e.client_name })),
   ].sort((a, b) => (a.date < b.date ? -1 : 1));
   res.json({ data: items });
 }));

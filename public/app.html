@@ -47,6 +47,23 @@
   table{width:100%;border-collapse:collapse}th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:10px 14px;border-bottom:1px solid var(--border);background:var(--bg)}
   td{padding:11px 14px;border-bottom:1px solid var(--border);font-size:13px}tbody tr:hover{background:var(--bg)}
   .content thead th{position:sticky;top:60px;z-index:1}
+  /* FullCalendar polish — additive */
+  .fc .fc-toolbar-title{font-size:18px;font-weight:700;color:var(--navy);letter-spacing:.2px}
+  .fc .fc-button{background:var(--navy)!important;border-color:var(--navy)!important;color:#fff!important;font-weight:600;padding:6px 12px;border-radius:7px;text-transform:capitalize;box-shadow:none}
+  .fc .fc-button:hover{filter:brightness(1.15)}
+  .fc .fc-button-primary:not(:disabled).fc-button-active{background:var(--gold)!important;border-color:var(--gold)!important;color:#13263f!important}
+  .fc .fc-col-header-cell{background:linear-gradient(180deg,#f4f8fd,#e6eef9);border-color:var(--border)}
+  .fc .fc-col-header-cell-cushion{color:var(--navy);font-weight:700;font-size:11.5px;letter-spacing:.6px;text-transform:uppercase;padding:8px 6px}
+  .fc .fc-daygrid-day-number{font-weight:600;color:var(--text);padding:6px 8px}
+  .fc .fc-daygrid-day.fc-day-today{background:#fff8e1!important}
+  .fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number{color:#b8860b;font-weight:800}
+  .fc .fc-daygrid-day.fc-day-sat,.fc .fc-daygrid-day.fc-day-sun{background:#fafbfd}
+  .fc .fc-daygrid-day:hover{background:#eef4fb}
+  .fc .fc-daygrid-day.fc-day-today:hover{background:#fff3c4!important}
+  .fc-event{transition:transform .12s ease, box-shadow .12s ease}
+  .fc-event:hover{transform:translateY(-1px);box-shadow:0 4px 10px rgba(13,38,82,0.18)!important;filter:brightness(1.06)}
+  .fc-daygrid-more-link{color:var(--navy);font-weight:700;font-size:11.5px}
+  .fc-scrollgrid{border-radius:10px;overflow:hidden}
   .chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:14px;font-size:11px;font-weight:600}
   .chip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
   .c-green{color:var(--green);background:var(--green-bg)}.c-amber{color:var(--amber);background:var(--amber-bg)}
@@ -1037,7 +1054,18 @@ async function renderTasks(){
       ${canCreate?'<div style="display:flex;gap:8px"><button class="btn" onclick="newEvent()">+ New event</button><button class="btn primary" onclick="newTask()">+ New task</button></div>':''}</div>
     <div id="taskFormBox"></div>
     <div class="card pad" style="margin-bottom:16px"><div id="taskCalendar"></div>
-      <div style="margin-top:10px;font-size:12px;color:var(--muted)"><span style="color:#b3402f">&#9679;</span> Overdue &nbsp; <span style="color:#b5800f">&#9679;</span> Pending / upcoming &nbsp; <span style="color:#2e7d57">&#9679;</span> Filed &nbsp; <span style="color:#2c6fb3">&#9679;</span> Meeting</div></div>
+      <div style="margin-top:10px;font-size:12px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap">
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#c62828;vertical-align:middle"></span> Overdue</span>
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#388e3c;vertical-align:middle"></span> Filed</span>
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#1565c0;vertical-align:middle"></span> PAYE</span>
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#2e7d32;vertical-align:middle"></span> VAT</span>
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#00838f;vertical-align:middle"></span> SDL</span>
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#5e35b1;vertical-align:middle"></span> NSSF</span>
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#c2185b;vertical-align:middle"></span> WCF</span>
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#d32f2f;vertical-align:middle"></span> Urgent task</span>
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#3949ab;vertical-align:middle"></span> Event</span>
+        <span style="margin-left:8px;color:var(--muted);font-style:italic">Click an entry to open its client</span>
+      </div></div>
     <div class="card" style="margin-bottom:16px"><div class="pad" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <input id="tf_search" placeholder="Search tasks…" oninput="loadTaskList()" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;flex:1;min-width:160px">
       <select id="tf_status" class="btn" onchange="loadTaskList()"><option value="">All statuses</option><option value="open">Open</option><option value="in_progress">In progress</option><option value="done">Done</option><option value="cancelled">Cancelled</option></select>
@@ -1095,28 +1123,88 @@ async function createTask(){
   try{ await api('/tasks',{method:'POST',body:JSON.stringify(body)}); toast('Task created & assigned'); document.getElementById('taskFormBox').innerHTML=''; loadTaskList(); }
   catch(e){ toast(e.message); }
 }
+// Colour palette for calendar — vibrant + meaningful so a glance tells the story.
+const CAL_PALETTE = {
+  // Obligations by authority/type
+  PAYE:    { bg:'linear-gradient(135deg,#1e88e5,#0d47a1)', solid:'#1565c0' },
+  SDL:     { bg:'linear-gradient(135deg,#26c6da,#00838f)', solid:'#00838f' },
+  NSSF:    { bg:'linear-gradient(135deg,#7e57c2,#4527a0)', solid:'#5e35b1' },
+  WCF:     { bg:'linear-gradient(135deg,#ec407a,#ad1457)', solid:'#c2185b' },
+  PDPC:    { bg:'linear-gradient(135deg,#8d6e63,#4e342e)', solid:'#6d4c41' },
+  VAT:     { bg:'linear-gradient(135deg,#43a047,#1b5e20)', solid:'#2e7d32' },
+  PROVISIONAL_TAX:{ bg:'linear-gradient(135deg,#5c6bc0,#1a237e)', solid:'#3949ab' },
+  ROI:     { bg:'linear-gradient(135deg,#26a69a,#004d40)', solid:'#00796b' },
+  OTHER:   { bg:'linear-gradient(135deg,#78909c,#37474f)', solid:'#546e7a' },
+  // Statuses
+  overdue: { bg:'linear-gradient(135deg,#e53935,#8b0000)', solid:'#c62828' },
+  filed:   { bg:'linear-gradient(135deg,#66bb6a,#2e7d32)', solid:'#388e3c' },
+  // Tasks
+  taskUrgent:{ bg:'linear-gradient(135deg,#ff5252,#b71c1c)', solid:'#d32f2f' },
+  taskHigh: { bg:'linear-gradient(135deg,#ffa726,#e65100)', solid:'#ef6c00' },
+  taskNorm: { bg:'linear-gradient(135deg,#42a5f5,#1565c0)', solid:'#1976d2' },
+  taskLow:  { bg:'linear-gradient(135deg,#9ccc65,#558b2f)', solid:'#689f38' },
+  // Events
+  event:    { bg:'linear-gradient(135deg,#5c6bc0,#283593)', solid:'#3949ab' },
+};
+function calStyleFor(it,today){
+  if(it.kind==='event') return CAL_PALETTE.event; // event-specific colour applied separately below
+  if(it.kind==='task'){
+    if(it.date && it.date<today) return CAL_PALETTE.overdue;
+    return CAL_PALETTE['task'+(it.priority==='urgent'?'Urgent':it.priority==='high'?'High':it.priority==='low'?'Low':'Norm')];
+  }
+  // obligation
+  if(it.status==='filed') return CAL_PALETTE.filed;
+  if(it.date && it.date<today) return CAL_PALETTE.overdue;
+  return CAL_PALETTE[it.type] || CAL_PALETTE.OTHER;
+}
 function initTaskCalendar(){
   const elc=document.getElementById('taskCalendar'); if(!elc) return;
   if(typeof FullCalendar==='undefined'){ elc.innerHTML='<div style="color:var(--muted)">Calendar library is loading — refresh the page if it stays.</div>'; return; }
   const cal=new FullCalendar.Calendar(elc,{
-    initialView:'dayGridMonth', firstDay:1, height:560,
+    initialView:'dayGridMonth', firstDay:1, height:620,
     headerToolbar:{left:'prev,next today',center:'title',right:'dayGridMonth,timeGridWeek,listWeek'},
+    dayMaxEvents:4, // collapse extras into a "+N more" link
+    nowIndicator:true,
+    weekNumbers:false,
+    eventDisplay:'block',
     events:async (info,success,failure)=>{
       try{
         const from=info.startStr.slice(0,10), to=info.endStr.slice(0,10);
         const {data}=await api('/calendar?from='+encodeURIComponent(from)+'&to='+encodeURIComponent(to));
         const today=new Date().toISOString().slice(0,10);
         success(data.map(it=>{
-          let color='#2c6fb3';
-          if(it.kind==='event') color='#2c6fb3';
-          else if(it.status==='filed') color='#2e7d57';
-          else if(it.date && it.date<today) color='#b3402f';
-          else color='#b5800f';
-          return { id:it.kind+'_'+it.id, title:it.title, start:it.date, color, allDay:true };
+          const style=calStyleFor(it,today);
+          const solid=(it.kind==='event' && it.color) ? it.color : style.solid;
+          return { id:it.kind+'_'+it.id, title:it.title, start:it.date, allDay:true,
+            backgroundColor:solid, borderColor:solid, textColor:'#fff',
+            extendedProps:{ kind:it.kind, client_id:it.client_id, client_name:it.client_name,
+              status:it.status, priority:it.priority, type:it.type, gradient:(it.kind==='event'&&it.color)?null:style.bg } };
         }));
       }catch(e){ failure(e); }
     },
-    eventClick:(arg)=>{ toast(arg.event.title); }
+    eventDidMount:(info)=>{
+      // Apply the gradient + a small rounded card look
+      const g=info.event.extendedProps && info.event.extendedProps.gradient;
+      if(g) info.el.style.background=g;
+      info.el.style.border='0';
+      info.el.style.borderRadius='6px';
+      info.el.style.padding='2px 6px';
+      info.el.style.fontSize='11.5px';
+      info.el.style.fontWeight='600';
+      info.el.style.boxShadow='0 1px 2px rgba(0,0,0,0.12)';
+      info.el.style.cursor='pointer';
+      const p=info.event.extendedProps||{};
+      if(p.client_name) info.el.title = `${info.event.title}\nClient: ${p.client_name}\nClick to open client`;
+    },
+    eventClick:(arg)=>{
+      const p=arg.event.extendedProps||{};
+      // Clicking any client-linked entry opens the client detail.
+      if(p.client_id){ viewClient(p.client_id); return; }
+      // Otherwise navigate sensibly by kind
+      if(p.kind==='task') go('tasks');
+      else if(p.kind==='obligation') go('tax');
+      else toast(arg.event.title);
+    },
   });
   cal.render();
 }
