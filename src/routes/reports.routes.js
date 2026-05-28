@@ -96,6 +96,31 @@ router.get('/dashboard', asyncHandler(async (req, res) => {
   });
 }));
 
+// Activity log feed (paginated, filterable). Admin / Partner / Manager only.
+router.get('/activity', asyncHandler(async (req, res) => {
+  if (!['Admin', 'Partner', 'Manager'].includes(req.user.role)) {
+    return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Manager+ required' } });
+  }
+  const limit = Math.min(Math.max(parseInt(req.query.limit || '50', 10), 1), 200);
+  const offset = Math.max(parseInt(req.query.offset || '0', 10), 0);
+  let where = 'a.firm_id=?';
+  const params = [req.user.firmId];
+  if (req.query.user_id) { where += ' AND a.user_id=?'; params.push(req.query.user_id); }
+  if (req.query.entity_type) { where += ' AND a.entity_type=?'; params.push(req.query.entity_type); }
+  if (req.query.action) { where += ' AND a.action=?'; params.push(req.query.action); }
+  if (req.query.from) { where += ' AND a.created_at::date >= ?'; params.push(req.query.from); }
+  if (req.query.to) { where += ' AND a.created_at::date <= ?'; params.push(req.query.to); }
+  const rows = await q(
+    `SELECT a.id, a.action, a.entity_type, a.entity_id, a.detail, a.ip_address, a.created_at,
+            u.full_name AS user_name, u.role AS user_role
+       FROM activity_log a LEFT JOIN users u ON u.id=a.user_id
+      WHERE ${where} ORDER BY a.created_at DESC LIMIT ${limit} OFFSET ${offset}`,
+    params
+  );
+  const total = (await one(`SELECT COUNT(*)::int n FROM activity_log a WHERE ${where}`, params)).n;
+  res.json({ data: rows, meta: { total, limit, offset } });
+}));
+
 router.get('/productivity', requirePermission('report.read'), asyncHandler(async (req, res) => {
   const rows = await q(
     `SELECT u.full_name, u.role,

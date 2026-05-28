@@ -105,6 +105,7 @@
       <div class="nav-item" data-page="timesheets" id="nav-timesheets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Timesheets</div>
       <div class="nav-item" data-page="settings" id="nav-settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</div>
       <div class="nav-item" data-page="management" id="nav-management"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>Management</div>
+      <div class="nav-item" data-page="activity" id="nav-activity"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Activity log</div>
       <div class="nav-item" data-page="ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 1 3 3v1a3 3 0 0 1 3 3 3 3 0 0 1 0 6 3 3 0 0 1-3 3v1a3 3 0 0 1-6 0v-1a3 3 0 0 1-3-3 3 3 0 0 1 0-6 3 3 0 0 1 3-3V5a3 3 0 0 1 3-3z"/></svg>AI Assistant</div>
       <div class="nav-item" data-page="airisk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>AI Risk Center</div>
       <div class="nav-item" data-page="aianalytics"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-6"/></svg>AI Analytics</div>
@@ -143,6 +144,7 @@
       <section class="page" id="page-timesheets"></section>
       <section class="page" id="page-settings"></section>
       <section class="page" id="page-management"></section>
+      <section class="page" id="page-activity"></section>
       <section class="page" id="page-ai"></section>
       <section class="page" id="page-airisk"></section>
       <section class="page" id="page-aianalytics"></section>
@@ -282,7 +284,7 @@ tickClock(); setInterval(tickClock,1000);
 })();
 
 /* ---------------- navigation ---------------- */
-const renderers={dashboard:renderDashboard,clients:renderClients,workflow:renderWorkflow,tasks:renderTasks,documents:renderDocuments,tax:renderTax,accounting:renderAccounting,staff:renderStaff,billing:renderBilling,timesheets:renderTimesheets,settings:renderSettings,management:renderManagement,ai:renderAI,airisk:renderAIRisk,aianalytics:renderAIAnalytics,airecs:renderAIRecs};
+const renderers={dashboard:renderDashboard,clients:renderClients,workflow:renderWorkflow,tasks:renderTasks,documents:renderDocuments,tax:renderTax,accounting:renderAccounting,staff:renderStaff,billing:renderBilling,timesheets:renderTimesheets,settings:renderSettings,management:renderManagement,activity:renderActivity,ai:renderAI,airisk:renderAIRisk,aianalytics:renderAIAnalytics,airecs:renderAIRecs};
 function go(page){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.page===page));
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -374,6 +376,55 @@ async function renderManagement(){
       </div>`;
   }catch(e){ document.getElementById('mg_body').innerHTML=`<div class="card pad" style="color:var(--red)">${esc(e.message)}</div>`; }
 }
+
+/* ---------------- Activity Log ---------------- */
+(function(){var n=document.getElementById('nav-activity'); if(n&&!(USER&&['Admin','Partner','Manager'].includes(USER.role))) n.style.display='none';})();
+let _aclFilters={ user_id:'', entity_type:'', action:'', from:'', to:'', offset:0, limit:50 };
+async function renderActivity(){
+  const el=document.getElementById('page-activity');
+  if(!(USER&&['Admin','Partner','Manager'].includes(USER.role))){ el.innerHTML='<div class="page-head"><div><h2>Activity log</h2></div></div><div class="card pad" style="color:var(--muted)">Manager / Partner / Admin only.</div>'; return; }
+  _aclFilters.offset=0;
+  let staff=[]; try{ staff=(await api('/assignable-staff')).data; }catch(e){}
+  const entityTypes=['client','engagement','task','event','document','obligation','user','approval','workpaper','invoice','reminder_scan'];
+  const actions=['create','update','delete','restore','assign','unassign','advance','revert','generate','run','sign','reject'];
+  el.innerHTML=`<div class="page-head"><div><h2>Activity log</h2><p>Audit trail of every action across the firm</p></div></div>
+    <div class="card" style="margin-bottom:16px"><div class="pad" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <select id="af_user" class="btn" onchange="aclFilter()"><option value="">All staff</option>${staff.map(s=>`<option value="${s.id}">${esc(s.full_name)}</option>`).join('')}</select>
+      <select id="af_entity" class="btn" onchange="aclFilter()"><option value="">All entity types</option>${entityTypes.map(t=>`<option value="${t}">${t}</option>`).join('')}</select>
+      <select id="af_action" class="btn" onchange="aclFilter()"><option value="">All actions</option>${actions.map(a=>`<option value="${a}">${a}</option>`).join('')}</select>
+      <input id="af_from" type="date" class="btn" onchange="aclFilter()">
+      <input id="af_to" type="date" class="btn" onchange="aclFilter()">
+      <button class="btn" onclick="aclReset()">Clear</button>
+    </div></div>
+    <div class="card" id="aclBody">Loading…</div>`;
+  loadActivity();
+}
+function aclFilter(){
+  _aclFilters.user_id=val('af_user'); _aclFilters.entity_type=val('af_entity'); _aclFilters.action=val('af_action');
+  _aclFilters.from=val('af_from'); _aclFilters.to=val('af_to'); _aclFilters.offset=0;
+  loadActivity();
+}
+function aclReset(){ ['af_user','af_entity','af_action','af_from','af_to'].forEach(i=>{const x=document.getElementById(i); if(x) x.value='';}); aclFilter(); }
+async function loadActivity(){
+  const box=document.getElementById('aclBody'); if(!box) return;
+  const qs=new URLSearchParams();
+  Object.entries(_aclFilters).forEach(([k,v])=>{ if(v||v===0) qs.set(k,String(v)); });
+  try{ const {data,meta}=await api('/reports/activity?'+qs.toString());
+    const more=meta.offset+data.length<meta.total;
+    box.innerHTML=`<table><thead><tr><th>When</th><th>User</th><th>Action</th><th>Entity</th><th>Detail</th></tr></thead><tbody>
+      ${data.map(r=>{ let det=''; try{ det=r.detail?(typeof r.detail==='string'?r.detail:JSON.stringify(r.detail)):''; }catch(e){ det=String(r.detail||''); }
+        return `<tr><td style="white-space:nowrap">${esc(String(r.created_at||'').slice(0,19).replace('T',' '))}</td>
+        <td>${esc(r.user_name||'system')}<div style="color:var(--muted);font-size:11px">${esc(r.user_role||'')}</div></td>
+        <td><span class="tag">${esc(r.action)}</span></td>
+        <td>${esc(r.entity_type||'—')}${r.entity_id?`<div style="color:var(--muted);font-size:11px">${esc(String(r.entity_id).slice(0,8))}…</div>`:''}</td>
+        <td style="font-size:11.5px;color:var(--muted);max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(det)}">${esc(det)}</td></tr>`;
+      }).join('')||'<tr><td colspan="5" style="color:var(--muted)">No activity matches these filters</td></tr>'}
+    </tbody></table>
+    <div class="pad" style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border)"><span style="color:var(--muted);font-size:12px">Showing ${meta.offset+1}–${meta.offset+data.length} of ${meta.total}</span>
+      <div style="display:flex;gap:6px"><button class="btn" ${meta.offset<=0?'disabled':''} onclick="aclPage(-1)">◂ Prev</button><button class="btn" ${more?'':'disabled'} onclick="aclPage(1)">Next ▸</button></div></div>`;
+  }catch(e){ box.innerHTML=`<div class="pad" style="color:var(--red)">${esc(e.message)}</div>`; }
+}
+function aclPage(dir){ _aclFilters.offset=Math.max(0,_aclFilters.offset+dir*_aclFilters.limit); loadActivity(); }
 
 /* ---------------- System Settings ---------------- */
 (function(){var n=document.getElementById('nav-settings'); if(n&&!(USER&&['Admin','Partner'].includes(USER.role))) n.style.display='none';})();
@@ -701,21 +752,21 @@ async function renderDashboard(){
           ${mw.myTasks.map(t=>`<tr style="cursor:pointer" onclick="go('tasks')"><td>${esc(t.title)}</td><td>${esc(t.client_name||'—')}</td><td><span class="tag">${esc(t.priority)}</span></td><td>${esc((t.due_date||'').slice(0,10)||'—')}</td></tr>`).join('')}
         </tbody></table>`:'<div style="color:var(--muted);font-size:12.5px;margin-top:10px">No open tasks assigned to you.</div>'}</div></div>
       <div class="grid kpis" style="margin-bottom:16px">
-        ${kpi('Active clients',k.activeClients,'var(--blue)','var(--blue-bg)')}
-        ${kpi('Deadlines (7 days)',k.deadlines7,'var(--amber)','var(--amber-bg)')}
-        ${kpi('Pending reviews',k.pendingReviews,'var(--green)','var(--green-bg)')}
-        ${kpi('Overdue tasks',k.overdueTasks,'var(--red)','var(--red-bg)')}
+        ${kpi('Active clients',k.activeClients,'var(--blue)','var(--blue-bg)','clients')}
+        ${kpi('Deadlines (7 days)',k.deadlines7,'var(--amber)','var(--amber-bg)','tax')}
+        ${kpi('Pending reviews',k.pendingReviews,'var(--green)','var(--green-bg)','workflow')}
+        ${kpi('Overdue tasks',k.overdueTasks,'var(--red)','var(--red-bg)','tasks')}
       </div>
       <div class="grid kpis" style="margin-bottom:16px">
-        ${kpi('Revenue (fees)',tzs(k.revenue),'var(--navy)','var(--bg)')}
-        ${kpi('Avg audit completion',k.avgCompletion+'%','var(--gold)','var(--amber-bg)')}
+        ${kpi('Revenue (fees)',tzs(k.revenue),'var(--navy)','var(--bg)','billing')}
+        ${kpi('Avg audit completion',k.avgCompletion+'%','var(--gold)','var(--amber-bg)','workflow')}
         ${kpi('Unread alerts',d.unread,'var(--red)','var(--red-bg)')}
-        ${kpi('Client mix',d.clientMix.reduce((a,b)=>a+b.n,0),'var(--blue)','var(--blue-bg)')}
+        ${kpi('Client mix',d.clientMix.reduce((a,b)=>a+b.n,0),'var(--blue)','var(--blue-bg)','clients')}
       </div>
       <div class="grid cols2" style="margin-bottom:16px">
-        <div class="card"><div class="card-head"><h3>Audit engagements — progress</h3><span class="tag" style="cursor:pointer" onclick="go('workflow')">Open</span></div>
+        <div class="card"><div class="card-head"><h3>Audit engagements — progress</h3><span class="tag" style="cursor:pointer" onclick="go('workflow')">View all</span></div>
           <table><thead><tr><th>Client</th><th>Stage</th><th>Progress</th><th>Manager</th></tr></thead><tbody>
-          ${d.auditProgress.map(e=>`<tr><td><span class="cl-logo" style="background:${lg(e.client_name)}">${initials(e.client_name)}</span>${esc(e.client_name)}</td>
+          ${d.auditProgress.map(e=>`<tr style="cursor:pointer" onclick="goEng('${e.id}')"><td><span class="cl-logo" style="background:${lg(e.client_name)}">${initials(e.client_name)}</span>${esc(e.client_name)}</td>
             <td><span class="chip c-blue">${esc(e.current_stage)}</span></td>
             <td><div style="display:flex;gap:8px;align-items:center"><div class="progress"><i style="width:${e.progress_pct}%"></i></div>${e.progress_pct}%</div></td>
             <td>${esc(e.manager_name||'—')}</td></tr>`).join('')||'<tr><td colspan="4" style="color:var(--muted)">No engagements</td></tr>'}
@@ -723,9 +774,9 @@ async function renderDashboard(){
         <div class="card"><div class="card-head"><h3>Client mix</h3></div><div class="pad"><div class="chart-box"><canvas id="mixChart"></canvas></div></div></div>
       </div>
       <div class="grid cols2">
-        <div class="card"><div class="card-head"><h3>Compliance status</h3></div><div class="pad"><div class="chart-box"><canvas id="compChart"></canvas></div></div></div>
-        <div class="card"><div class="card-head"><h3>Upcoming deadlines</h3><span class="tag" style="cursor:pointer" onclick="go('tax')">Tax</span></div>
-          ${d.deadlines.map(o=>`<div class="row-item"><div style="flex:1"><b>${esc(o.type)} — ${esc(o.client_name)}</b><div style="color:var(--muted);font-size:11.5px">${esc(o.authority)} · due ${esc(o.due_date)}</div></div>${statusChip(o.status)}</div>`).join('')||'<div class="pad" style="color:var(--muted)">No upcoming deadlines</div>'}
+        <div class="card"><div class="card-head"><h3>Compliance status</h3><span class="tag" style="cursor:pointer" onclick="go('tax')">View all</span></div><div class="pad"><div class="chart-box"><canvas id="compChart"></canvas></div></div></div>
+        <div class="card"><div class="card-head"><h3>Upcoming deadlines</h3><span class="tag" style="cursor:pointer" onclick="go('tax')">View all</span></div>
+          ${d.deadlines.map(o=>`<div class="row-item" style="cursor:pointer" onclick="go('tax')"><div style="flex:1"><b>${esc(o.type)} — ${esc(o.client_name)}</b><div style="color:var(--muted);font-size:11.5px">${esc(o.authority)} · due ${esc(o.due_date)}</div></div>${statusChip(o.status)}</div>`).join('')||'<div class="pad" style="color:var(--muted)">No upcoming deadlines</div>'}
         </div>
       </div>`;
     // charts
@@ -740,7 +791,11 @@ async function renderDashboard(){
       options:{maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}}}}});
   }catch(e){ document.getElementById('dashBody').innerHTML=`<div class="card pad" style="color:var(--red)">${esc(e.message)}</div>`; }
 }
-function kpi(label,val,color,bg){return `<div class="card kpi"><div class="ic" style="background:${bg};color:${color}"><svg viewBox="0 0 24 24" width="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg></div><div class="v">${val}</div><div class="l">${label}</div></div>`;}
+function kpi(label,val,color,bg,nav){
+  const click=nav?`style="cursor:pointer" onclick="go('${nav}')"`:'';
+  return `<div class="card kpi" ${click}><div class="ic" style="background:${bg};color:${color}"><svg viewBox="0 0 24 24" width="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg></div><div class="v">${val}</div><div class="l">${label}</div></div>`;
+}
+function goEng(id){ go('workflow'); setTimeout(()=>{ try{ openEng(id); }catch(e){} },150); }
 
 /* ---------------- Clients ---------------- */
 let clientFilter='all';
@@ -979,7 +1034,7 @@ async function renderTasks(){
   const el=document.getElementById('page-tasks');
   const canCreate=USER&&['Admin','Partner','Manager','Senior Auditor','Accountant','Tax Consultant'].includes(USER.role);
   el.innerHTML=`<div class="page-head"><div><h2>Tasks &amp; Calendar</h2><p>Calendar of tasks, tax deadlines, reviews &amp; meetings</p></div>
-      ${canCreate?'<button class="btn primary" onclick="newTask()">+ New task</button>':''}</div>
+      ${canCreate?'<div style="display:flex;gap:8px"><button class="btn" onclick="newEvent()">+ New event</button><button class="btn primary" onclick="newTask()">+ New task</button></div>':''}</div>
     <div id="taskFormBox"></div>
     <div class="card pad" style="margin-bottom:16px"><div id="taskCalendar"></div>
       <div style="margin-top:10px;font-size:12px;color:var(--muted)"><span style="color:#b3402f">&#9679;</span> Overdue &nbsp; <span style="color:#b5800f">&#9679;</span> Pending / upcoming &nbsp; <span style="color:#2e7d57">&#9679;</span> Filed &nbsp; <span style="color:#2c6fb3">&#9679;</span> Meeting</div></div>
@@ -1066,6 +1121,36 @@ function initTaskCalendar(){
   cal.render();
 }
 async function toggleTask(id,done){ try{ await api('/tasks/'+id,{method:'PATCH',body:JSON.stringify({status:done?'done':'open'})}); toast('Task updated'); loadTaskList(); }catch(e){ toast(e.message); loadTaskList(); } }
+async function newEvent(){
+  const box=document.getElementById('taskFormBox'); if(!box) return;
+  if(!taskClients.length){ try{ taskClients=(await api('/clients')).data; }catch(e){ taskClients=[]; } }
+  const today=new Date().toISOString().slice(0,10);
+  const colors=[
+    ['#2c6fb3','Meeting'],['#2e7d57','Internal milestone'],['#b5800f','Deadline / reminder'],
+    ['#7b3aa2','Training'],['#b3402f','Urgent'],['#13263f','Other'],
+  ];
+  box.innerHTML=`<div class="card pad" style="margin-bottom:16px"><h3 style="font-size:15px;font-weight:700;margin-bottom:10px">New calendar event</h3>
+    <div class="field"><label>Title *</label><input id="ne_title" placeholder="e.g. Kick-off meeting — ABC Ltd"></div>
+    <div class="g2"><div class="field"><label>Type</label><select id="ne_type"><option value="meeting">Meeting</option><option value="reminder">Reminder</option><option value="milestone">Milestone</option><option value="training">Training</option><option value="event">Other</option></select></div>
+      <div class="field"><label>Colour</label><select id="ne_color">${colors.map(c=>`<option value="${c[0]}" style="color:${c[0]}">${c[1]}</option>`).join('')}</select></div></div>
+    <div class="g2"><div class="field"><label>Date *</label><input id="ne_date" type="date" value="${today}"></div>
+      <div class="field"><label>Time (optional)</label><input id="ne_time" type="time" placeholder="HH:MM"></div></div>
+    <div class="field"><label>Client (optional)</label><select id="ne_client"><option value="">— None / internal —</option>${taskClients.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></div>
+    <div class="field" style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="ne_allday" checked> <label for="ne_allday">All day</label></div>
+    <div style="display:flex;gap:10px;margin-top:6px"><button class="btn primary" onclick="createEvent()">Add event</button><button class="btn" onclick="document.getElementById('taskFormBox').innerHTML=''">Cancel</button></div></div>`;
+}
+async function createEvent(){
+  const title=val('ne_title'), date=val('ne_date'), time=val('ne_time');
+  if(!title){ toast('Title is required'); return; }
+  if(!date){ toast('Date is required'); return; }
+  const allDay=document.getElementById('ne_allday').checked;
+  const start_at=(!allDay && time)?`${date} ${time}:00`:`${date} 09:00:00`;
+  const body={ title, type:val('ne_type')||'event', color:val('ne_color')||'#2c6fb3',
+    start_at, all_day:allDay, client_id:val('ne_client')||null };
+  try{ await api('/events',{method:'POST',body:JSON.stringify(body)}); toast('Event added');
+    document.getElementById('taskFormBox').innerHTML=''; renderTasks();
+  }catch(e){ toast(e.message); }
+}
 
 /* ---------------- Documents ---------------- */
 let docClients=[];

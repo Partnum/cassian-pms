@@ -139,4 +139,46 @@ router.get('/calendar', requirePermission('task.read'), asyncHandler(async (req,
   res.json({ data: items });
 }));
 
+// ---- Calendar events CRUD ----
+// List events (in optional range)
+router.get('/events', requirePermission('task.read'), asyncHandler(async (req, res) => {
+  const params = [req.user.firmId];
+  let where = 'firm_id=?';
+  if (req.query.from && req.query.to) { where += ' AND start_at::date BETWEEN ? AND ?'; params.push(req.query.from, req.query.to); }
+  const rows = await q(`SELECT * FROM calendar_events WHERE ${where} ORDER BY start_at`, params);
+  res.json({ data: rows });
+}));
+
+// Create an event (meeting, reminder, internal milestone, etc.)
+router.post('/events', requirePermission('task.create'), asyncHandler(async (req, res) => {
+  const b = req.body || {};
+  if (!b.title || !b.start_at) return res.status(400).json({ error: { code: 'BAD_INPUT', message: 'title and start_at are required' } });
+  const id = uuid();
+  await q(
+    `INSERT INTO calendar_events (id, firm_id, title, type, client_id, engagement_id, start_at, end_at, all_day, color, created_by)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+    [id, req.user.firmId, b.title, b.type || 'event', b.client_id || null, b.engagement_id || null,
+      b.start_at, b.end_at || null, b.all_day ? 1 : 0, b.color || '#2c6fb3', req.user.id]
+  );
+  await logActivity(req, 'create', 'event', id, { title: b.title });
+  res.status(201).json({ data: { id } });
+}));
+
+router.patch('/events/:id', requirePermission('task.update'), asyncHandler(async (req, res) => {
+  const allowed = ['title', 'type', 'client_id', 'engagement_id', 'start_at', 'end_at', 'all_day', 'color'];
+  const sets = []; const params = [];
+  for (const k of allowed) if (k in (req.body || {})) { sets.push(`${k}=?`); params.push(req.body[k]); }
+  if (!sets.length) return res.status(400).json({ error: { code: 'BAD_INPUT', message: 'No updatable fields' } });
+  params.push(req.params.id, req.user.firmId);
+  await q(`UPDATE calendar_events SET ${sets.join(', ')} WHERE id=? AND firm_id=?`, params);
+  await logActivity(req, 'update', 'event', req.params.id, req.body);
+  res.json({ data: { ok: true } });
+}));
+
+router.delete('/events/:id', requirePermission('task.delete'), asyncHandler(async (req, res) => {
+  await q('DELETE FROM calendar_events WHERE id=? AND firm_id=?', [req.params.id, req.user.firmId]);
+  await logActivity(req, 'delete', 'event', req.params.id);
+  res.json({ data: { ok: true } });
+}));
+
 module.exports = router;
