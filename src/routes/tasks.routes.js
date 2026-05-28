@@ -5,10 +5,14 @@ const router = express.Router();
 const { q, one, uuid } = require('../config');
 const { requirePermission, scopeClientIds, logActivity, asyncHandler } = require('../auth');
 const { ALL_CLIENT_ROLES } = require('../constants');
+const { createNotification } = require('../services/notifications.service');
 
 const TASK_SELECT = `
-  SELECT t.*, c.name AS client_name, u.full_name AS assignee_name
-    FROM tasks t LEFT JOIN clients c ON c.id=t.client_id LEFT JOIN users u ON u.id=t.assignee_id`;
+  SELECT t.*, c.name AS client_name, u.full_name AS assignee_name, r.full_name AS reviewer_name
+    FROM tasks t
+    LEFT JOIN clients c ON c.id=t.client_id
+    LEFT JOIN users u ON u.id=t.assignee_id
+    LEFT JOIN users r ON r.id=t.reviewer_id`;
 
 // Build a scope clause for tasks based on the user's client access.
 async function taskScope(req) {
@@ -25,8 +29,20 @@ router.get('/tasks', requirePermission('task.read'), asyncHandler(async (req, re
   const { clause, params } = await taskScope(req);
   let where = clause + ' AND (t.client_id IS NULL OR c.deleted_at IS NULL)'; const p = [...params];
   if (req.query.status) { where += ' AND t.status=?'; p.push(req.query.status); }
+  if (req.query.priority) { where += ' AND t.priority=?'; p.push(req.query.priority); }
+  if (req.query.assignee_id) { where += ' AND t.assignee_id=?'; p.push(req.query.assignee_id); }
+  if (req.query.department) { where += ' AND t.department=?'; p.push(req.query.department); }
   if (req.query.mine === '1') { where += ' AND t.assignee_id=?'; p.push(req.user.id); }
+  if (req.query.search) { where += ' AND (t.title ILIKE ? OR t.description ILIKE ?)'; const s = `%${req.query.search}%`; p.push(s, s); }
   const rows = await q(`${TASK_SELECT} WHERE ${where} ORDER BY (t.status='done')::int, (t.due_date IS NULL)::int, t.due_date`, p);
+  res.json({ data: rows });
+}));
+
+// Assignable staff for task assignee/reviewer dropdowns (any task user, firm staff only).
+router.get('/assignable-staff', requirePermission('task.read'), asyncHandler(async (req, res) => {
+  const rows = await q(
+    "SELECT id, full_name, role FROM users WHERE firm_id=? AND deleted_at IS NULL AND status='active' AND role <> 'Client' ORDER BY full_name",
+    [req.user.firmId]);
   res.json({ data: rows });
 }));
 
@@ -39,26 +55,58 @@ router.get('/tasks/:id', requirePermission('task.read'), asyncHandler(async (req
 router.post('/tasks', requirePermission('task.create'), asyncHandler(async (req, res) => {
   const b = req.body || {};
   if (!b.title) return res.status(400).json({ error: { code: 'BAD_INPUT', message: 'title is required' } });
+  if (!b.assignee_id) return res.status(400).json({ error: { code: 'BAD_INPUT', message: 'Every task must be assigned to a staff member' } });
   const id = uuid();
   await q(
-    `INSERT INTO tasks (id, firm_id, title, description, client_id, engagement_id, assignee_id, created_by, priority, status, due_date)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+    `INSERT INTO tasks (id, firm_id, title, description, client_id, engagement_id, assignee_id, reviewer_id, department, created_by, priority, status, due_date)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [id, req.user.firmId, b.title, b.description || null, b.client_id || null, b.engagement_id || null,
-      b.assignee_id || null, req.user.id, b.priority || 'normal', b.status || 'open', b.due_date || null]
+      b.assignee_id || null, b.reviewer_id || null, b.department || null, req.user.id,
+      b.priority || 'normal', b.status || 'open', b.due_date || null]
   );
   await logActivity(req, 'create', 'task', id, { title: b.title });
+  // Notify the assignee (unless they assigned the task to themselves).
+  if (b.assignee_id && b.assignee_id !== req.user.id) {
+    await createNotification({
+      firmId: req.user.firmId, userId: b.assignee_id, type: 'info',
+      title: `New task assigned: ${b.title}`,
+      body: `${req.user.fullName || 'A colleague'} assigned you a task${b.due_date ? ' due ' + String(b.due_date).slice(0, 10) : ''}.`,
+      link: '/app.html#tasks',
+    });
+  }
+  if (b.reviewer_id && b.reviewer_id !== req.user.id && b.reviewer_id !== b.assignee_id) {
+    await createNotification({
+      firmId: req.user.firmId, userId: b.reviewer_id, type: 'info',
+      title: `You are reviewer on: ${b.title}`,
+      body: 'You have been set as the reviewer for this task.',
+      link: '/app.html#tasks',
+    });
+  }
   res.status(201).json({ data: { id } });
 }));
 
 router.patch('/tasks/:id', requirePermission('task.update'), asyncHandler(async (req, res) => {
-  const allowed = ['title', 'description', 'client_id', 'engagement_id', 'assignee_id', 'priority', 'status', 'due_date'];
+  const allowed = ['title', 'description', 'client_id', 'engagement_id', 'assignee_id', 'reviewer_id', 'department', 'priority', 'status', 'due_date'];
+  const body = req.body || {};
+  // Detect reassignment so we can notify the new owner.
+  let prev = null;
+  if ('assignee_id' in body) prev = await one('SELECT assignee_id, title FROM tasks WHERE id=? AND firm_id=?', [req.params.id, req.user.firmId]);
   const sets = []; const params = [];
-  for (const k of allowed) if (k in (req.body || {})) { sets.push(`${k}=?`); params.push(req.body[k]); }
-  if ('status' in (req.body || {})) { sets.push('completed_at=' + (req.body.status === 'done' ? 'NOW()' : 'NULL')); }
+  for (const k of allowed) if (k in body) { sets.push(`${k}=?`); params.push(body[k]); }
+  if ('status' in body) { sets.push('completed_at=' + (body.status === 'done' ? 'NOW()' : 'NULL')); }
   if (!sets.length) return res.status(400).json({ error: { code: 'BAD_INPUT', message: 'No updatable fields' } });
   params.push(req.params.id, req.user.firmId);
   await q(`UPDATE tasks SET ${sets.join(', ')} WHERE id=? AND firm_id=?`, params);
-  await logActivity(req, 'update', 'task', req.params.id, req.body);
+  await logActivity(req, 'update', 'task', req.params.id, body);
+  // Notify the new assignee if the task was reassigned to someone else.
+  if (prev && body.assignee_id && body.assignee_id !== prev.assignee_id && body.assignee_id !== req.user.id) {
+    await createNotification({
+      firmId: req.user.firmId, userId: body.assignee_id, type: 'info',
+      title: `Task reassigned to you: ${prev.title}`,
+      body: `${req.user.fullName || 'A colleague'} assigned you this task.`,
+      link: '/app.html#tasks',
+    });
+  }
   res.json({ data: { ok: true } });
 }));
 

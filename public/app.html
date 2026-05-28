@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cassian &amp; Associates — Management System</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
 <style>
   :root{--navy:#1E3A5F;--navy7:#16304f;--gold:#C8A24B;--bg:#f4f6f9;--card:#fff;--text:#1c2733;--muted:#697586;
     --border:#e2e8f0;--sidebar:#13263f;--green:#2e7d57;--green-bg:#e6f4ec;--amber:#b5800f;--amber-bg:#fdf3df;
@@ -45,6 +46,7 @@
   .kpi{padding:16px}.kpi .v{font-size:25px;font-weight:800}.kpi .l{color:var(--muted);font-size:12px;margin-top:3px}.kpi .ic{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center}
   table{width:100%;border-collapse:collapse}th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:10px 14px;border-bottom:1px solid var(--border);background:var(--bg)}
   td{padding:11px 14px;border-bottom:1px solid var(--border);font-size:13px}tbody tr:hover{background:var(--bg)}
+  .content thead th{position:sticky;top:60px;z-index:1}
   .chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:14px;font-size:11px;font-weight:600}
   .chip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
   .c-green{color:var(--green);background:var(--green-bg)}.c-amber{color:var(--amber);background:var(--amber-bg)}
@@ -674,14 +676,26 @@ async function accVATCalc(){
 }
 
 /* ---------------- Dashboard ---------------- */
+function greetingText(){const h=new Date().getHours();return h<12?'Good morning':h<17?'Good afternoon':'Good evening';}
 async function renderDashboard(){
   const el=document.getElementById('page-dashboard');
-  el.innerHTML=`<div class="page-head"><div><h2>Welcome, ${esc((USER&&USER.full_name)||'')}</h2><p>Practice overview · live data from the API</p></div>
+  const nm=(USER&&(USER.full_name||USER.name))||'';
+  el.innerHTML=`<div class="page-head"><div><h2>${greetingText()}, ${esc(nm.split(' ')[0]||nm)}</h2><p>${esc((USER&&USER.role)||'')} · practice overview · live data</p></div>
     <button class="btn primary" onclick="openModal()">+ New client</button></div><div id="dashBody">Loading…</div>`;
   try{
     const {data:d}=await api('/reports/dashboard');
-    const k=d.kpis;
+    const k=d.kpis; const mw=d.myWork||{};
     document.getElementById('dashBody').innerHTML=`
+      <div class="card" style="margin-bottom:16px;border-left:3px solid var(--navy)"><div class="card-head"><h3>My work</h3><span class="tag" style="cursor:pointer" onclick="go('tasks')">Open tasks</span></div>
+        <div class="pad"><div class="grid kpis" style="margin-bottom:0">
+          ${kpi('My open tasks',mw.myOpenTasks||0,'var(--blue)','var(--blue-bg)')}
+          ${kpi('My overdue',mw.myOverdueTasks||0,'var(--red)','var(--red-bg)')}
+          ${kpi('Awaiting my review',mw.myReviews||0,'var(--amber)','var(--amber-bg)')}
+          ${kpi('My clients',mw.myClients||0,'var(--green)','var(--green-bg)')}
+        </div>
+        ${(mw.myTasks&&mw.myTasks.length)?`<table style="margin-top:12px"><thead><tr><th>My next tasks</th><th>Client</th><th>Priority</th><th>Due</th></tr></thead><tbody>
+          ${mw.myTasks.map(t=>`<tr style="cursor:pointer" onclick="go('tasks')"><td>${esc(t.title)}</td><td>${esc(t.client_name||'—')}</td><td><span class="tag">${esc(t.priority)}</span></td><td>${esc((t.due_date||'').slice(0,10)||'—')}</td></tr>`).join('')}
+        </tbody></table>`:'<div style="color:var(--muted);font-size:12.5px;margin-top:10px">No open tasks assigned to you.</div>'}</div></div>
       <div class="grid kpis" style="margin-bottom:16px">
         ${kpi('Active clients',k.activeClients,'var(--blue)','var(--blue-bg)')}
         ${kpi('Deadlines (7 days)',k.deadlines7,'var(--amber)','var(--amber-bg)')}
@@ -929,18 +943,98 @@ async function advanceEng(){ try{ const {data}=await api('/engagements/'+curEng+
 async function revertEng(){ try{ const {data}=await api('/engagements/'+curEng+'/revert',{method:'POST',body:JSON.stringify({})}); toast('Reverted to '+data.current_stage); openEng(curEng);}catch(e){ toast(e.message);} }
 
 /* ---------------- Tasks ---------------- */
+let taskStaff=[], taskClients=[];
 async function renderTasks(){
   const el=document.getElementById('page-tasks');
-  el.innerHTML=`<div class="page-head"><div><h2>Tasks &amp; Calendar</h2><p>Your assigned and team tasks</p></div></div><div class="card" id="taskTable">Loading…</div>`;
-  try{ const {data}=await api('/tasks');
-    document.getElementById('taskTable').innerHTML=`<table><thead><tr><th></th><th>Task</th><th>Client</th><th>Assignee</th><th>Priority</th><th>Due</th><th>Status</th></tr></thead><tbody>
-      ${data.map(t=>`<tr><td><input type="checkbox" ${t.status==='done'?'checked':''} onchange="toggleTask('${t.id}',this.checked)"></td>
-        <td>${esc(t.title)}</td><td>${esc(t.client_name||'—')}</td><td>${esc(t.assignee_name||'—')}</td>
-        <td><span class="tag">${esc(t.priority)}</span></td><td>${esc((t.due_date||'').slice(0,10)||'—')}</td><td>${statusChip(t.status)}</td></tr>`).join('')
-        ||'<tr><td colspan="7" style="color:var(--muted)">No tasks</td></tr>'}</tbody></table>`;
-  }catch(e){ document.getElementById('taskTable').innerHTML=`<div class="pad" style="color:var(--red)">${esc(e.message)}</div>`; }
+  const canCreate=USER&&['Admin','Partner','Manager','Senior Auditor','Accountant','Tax Consultant'].includes(USER.role);
+  el.innerHTML=`<div class="page-head"><div><h2>Tasks &amp; Calendar</h2><p>Calendar of tasks, tax deadlines, reviews &amp; meetings</p></div>
+      ${canCreate?'<button class="btn primary" onclick="newTask()">+ New task</button>':''}</div>
+    <div id="taskFormBox"></div>
+    <div class="card pad" style="margin-bottom:16px"><div id="taskCalendar"></div>
+      <div style="margin-top:10px;font-size:12px;color:var(--muted)"><span style="color:#b3402f">&#9679;</span> Overdue &nbsp; <span style="color:#b5800f">&#9679;</span> Pending / upcoming &nbsp; <span style="color:#2e7d57">&#9679;</span> Filed &nbsp; <span style="color:#2c6fb3">&#9679;</span> Meeting</div></div>
+    <div class="card" style="margin-bottom:16px"><div class="pad" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <input id="tf_search" placeholder="Search tasks…" oninput="loadTaskList()" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;flex:1;min-width:160px">
+      <select id="tf_status" class="btn" onchange="loadTaskList()"><option value="">All statuses</option><option value="open">Open</option><option value="in_progress">In progress</option><option value="done">Done</option><option value="cancelled">Cancelled</option></select>
+      <select id="tf_priority" class="btn" onchange="loadTaskList()"><option value="">Any priority</option><option value="urgent">Urgent</option><option value="high">High</option><option value="normal">Normal</option><option value="low">Low</option></select>
+      <select id="tf_assignee" class="btn" onchange="loadTaskList()"><option value="">All staff</option></select>
+      <label style="font-size:12.5px;display:flex;align-items:center;gap:5px"><input type="checkbox" id="tf_mine" onchange="loadTaskList()"> Mine only</label>
+    </div></div>
+    <div class="card" id="taskTable">Loading…</div>`;
+  initTaskCalendar();
+  try{ taskStaff=(await api('/assignable-staff')).data;
+    const sel=document.getElementById('tf_assignee');
+    if(sel) sel.innerHTML='<option value="">All staff</option>'+taskStaff.map(s=>`<option value="${s.id}">${esc(s.full_name)}</option>`).join('');
+  }catch(e){ taskStaff=[]; }
+  loadTaskList();
 }
-async function toggleTask(id,done){ try{ await api('/tasks/'+id,{method:'PATCH',body:JSON.stringify({status:done?'done':'open'})}); toast('Task updated'); }catch(e){ toast(e.message); renderTasks(); } }
+async function loadTaskList(){
+  const qs=new URLSearchParams();
+  const s=val('tf_search'); if(s) qs.set('search',s);
+  const st=document.getElementById('tf_status'); if(st&&st.value) qs.set('status',st.value);
+  const pr=document.getElementById('tf_priority'); if(pr&&pr.value) qs.set('priority',pr.value);
+  const as=document.getElementById('tf_assignee'); if(as&&as.value) qs.set('assignee_id',as.value);
+  const mn=document.getElementById('tf_mine'); if(mn&&mn.checked) qs.set('mine','1');
+  const box=document.getElementById('taskTable'); if(!box) return;
+  try{ const {data}=await api('/tasks'+(qs.toString()?'?'+qs.toString():''));
+    box.innerHTML=`<table><thead><tr><th></th><th>Task</th><th>Client</th><th>Assignee</th><th>Reviewer</th><th>Dept</th><th>Priority</th><th>Due</th><th>Status</th></tr></thead><tbody>
+      ${data.map(t=>`<tr><td><input type="checkbox" ${t.status==='done'?'checked':''} onchange="toggleTask('${t.id}',this.checked)"></td>
+        <td>${esc(t.title)}</td><td>${esc(t.client_name||'—')}</td><td>${esc(t.assignee_name||'—')}</td><td>${esc(t.reviewer_name||'—')}</td>
+        <td>${esc(t.department||'—')}</td><td><span class="tag">${esc(t.priority)}</span></td><td>${esc((t.due_date||'').slice(0,10)||'—')}</td><td>${statusChip(t.status)}</td></tr>`).join('')
+        ||'<tr><td colspan="9" style="color:var(--muted)">No tasks match these filters</td></tr>'}</tbody></table>`;
+  }catch(e){ box.innerHTML=`<div class="pad" style="color:var(--red)">${esc(e.message)}</div>`; }
+}
+async function newTask(){
+  const box=document.getElementById('taskFormBox'); if(!box) return;
+  if(!taskStaff.length){ try{ taskStaff=(await api('/assignable-staff')).data; }catch(e){} }
+  try{ taskClients=(await api('/clients')).data; }catch(e){ taskClients=[]; }
+  const today=new Date().toISOString().slice(0,10);
+  const staffOpts=taskStaff.map(s=>`<option value="${s.id}">${esc(s.full_name)} — ${esc(s.role)}</option>`).join('');
+  box.innerHTML=`<div class="card pad" style="margin-bottom:16px"><h3 style="font-size:15px;font-weight:700;margin-bottom:10px">New task</h3>
+    <div class="field"><label>Title *</label><input id="nt_title" placeholder="e.g. Revenue cut-off testing"></div>
+    <div class="g2"><div class="field"><label>Client (optional)</label><select id="nt_client"><option value="">— None / internal —</option>${taskClients.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></div>
+      <div class="field"><label>Department</label><select id="nt_dept"><option value="">—</option><option>Audit</option><option>Tax</option><option>Accounting</option><option>Consultancy</option><option>Admin</option></select></div></div>
+    <div class="g2"><div class="field"><label>Assignee *</label><select id="nt_assignee"><option value="">— Choose staff —</option>${staffOpts}</select></div>
+      <div class="field"><label>Reviewer (optional)</label><select id="nt_reviewer"><option value="">— None —</option>${staffOpts}</select></div></div>
+    <div class="g2"><div class="field"><label>Priority</label><select id="nt_priority"><option value="normal">Normal</option><option value="low">Low</option><option value="high">High</option><option value="urgent">Urgent</option></select></div>
+      <div class="field"><label>Due date</label><input id="nt_due" type="date" value="${today}"></div></div>
+    <div class="field"><label>Notes (optional)</label><input id="nt_desc" placeholder="Short description"></div>
+    <div style="display:flex;gap:10px;margin-top:6px"><button class="btn primary" onclick="createTask()">Create task</button><button class="btn" onclick="document.getElementById('taskFormBox').innerHTML=''">Cancel</button></div></div>`;
+}
+async function createTask(){
+  const body={ title:val('nt_title'), client_id:val('nt_client')||null, department:val('nt_dept')||null,
+    assignee_id:val('nt_assignee')||null, reviewer_id:val('nt_reviewer')||null,
+    priority:val('nt_priority')||'normal', due_date:val('nt_due')||null, description:val('nt_desc')||null };
+  if(!body.title){ toast('Title is required'); return; }
+  if(!body.assignee_id){ toast('Please assign this task to a staff member'); return; }
+  try{ await api('/tasks',{method:'POST',body:JSON.stringify(body)}); toast('Task created & assigned'); document.getElementById('taskFormBox').innerHTML=''; loadTaskList(); }
+  catch(e){ toast(e.message); }
+}
+function initTaskCalendar(){
+  const elc=document.getElementById('taskCalendar'); if(!elc) return;
+  if(typeof FullCalendar==='undefined'){ elc.innerHTML='<div style="color:var(--muted)">Calendar library is loading — refresh the page if it stays.</div>'; return; }
+  const cal=new FullCalendar.Calendar(elc,{
+    initialView:'dayGridMonth', firstDay:1, height:560,
+    headerToolbar:{left:'prev,next today',center:'title',right:'dayGridMonth,timeGridWeek,listWeek'},
+    events:async (info,success,failure)=>{
+      try{
+        const from=info.startStr.slice(0,10), to=info.endStr.slice(0,10);
+        const {data}=await api('/calendar?from='+encodeURIComponent(from)+'&to='+encodeURIComponent(to));
+        const today=new Date().toISOString().slice(0,10);
+        success(data.map(it=>{
+          let color='#2c6fb3';
+          if(it.kind==='event') color='#2c6fb3';
+          else if(it.status==='filed') color='#2e7d57';
+          else if(it.date && it.date<today) color='#b3402f';
+          else color='#b5800f';
+          return { id:it.kind+'_'+it.id, title:it.title, start:it.date, color, allDay:true };
+        }));
+      }catch(e){ failure(e); }
+    },
+    eventClick:(arg)=>{ toast(arg.event.title); }
+  });
+  cal.render();
+}
+async function toggleTask(id,done){ try{ await api('/tasks/'+id,{method:'PATCH',body:JSON.stringify({status:done?'done':'open'})}); toast('Task updated'); loadTaskList(); }catch(e){ toast(e.message); loadTaskList(); } }
 
 /* ---------------- Documents ---------------- */
 let docClients=[];

@@ -62,9 +62,35 @@ router.get('/dashboard', asyncHandler(async (req, res) => {
   );
   const unread = (await one('SELECT COUNT(*)::int n FROM notifications WHERE user_id=? AND is_read=0', [req.user.id])).n;
 
+  // ---- Personalised "my work" section (per logged-in user) ----
+  const myOpenTasks = (await one(
+    "SELECT COUNT(*)::int n FROM tasks WHERE firm_id=? AND assignee_id=? AND status IN ('open','in_progress')",
+    [firmId, req.user.id])).n;
+  const myOverdueTasks = (await one(
+    "SELECT COUNT(*)::int n FROM tasks WHERE firm_id=? AND assignee_id=? AND status IN ('open','in_progress') AND due_date < NOW()",
+    [firmId, req.user.id])).n;
+  const myReviews = (await one(
+    "SELECT COUNT(*)::int n FROM tasks WHERE firm_id=? AND reviewer_id=? AND status IN ('open','in_progress')",
+    [firmId, req.user.id])).n;
+  const myClients = (await one(
+    `SELECT COUNT(DISTINCT cid)::int n FROM (
+       SELECT id AS cid FROM clients WHERE firm_id=? AND deleted_at IS NULL AND (manager_id=? OR engagement_partner_id=?)
+       UNION
+       SELECT client_id AS cid FROM user_client_access WHERE user_id=?
+     ) x`,
+    [firmId, req.user.id, req.user.id, req.user.id])).n;
+  const myTasks = await q(
+    `SELECT t.id, t.title, t.priority, t.status, t.due_date, c.name AS client_name
+       FROM tasks t LEFT JOIN clients c ON c.id=t.client_id
+      WHERE t.firm_id=? AND t.assignee_id=? AND t.status IN ('open','in_progress')
+      ORDER BY (t.due_date IS NULL)::int, t.due_date LIMIT 6`,
+    [firmId, req.user.id]);
+
   res.json({
     data: {
+      user: { name: req.user.fullName, role: req.user.role },
       kpis: { activeClients, deadlines7, pendingReviews, overdueTasks, revenue: Number(revRow.total), avgCompletion: Math.round(Number(compRow.avg)) },
+      myWork: { myOpenTasks, myOverdueTasks, myReviews, myClients, myTasks },
       clientMix, revenueByCategory, auditProgress, compliance, deadlines, feed, unread,
     },
   });
