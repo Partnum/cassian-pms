@@ -1176,8 +1176,13 @@ async function createTask(){
     priority:val('nt_priority')||'normal', due_date:val('nt_due')||null, description:val('nt_desc')||null };
   if(!body.title){ toast('Title is required'); return; }
   if(!body.assignee_id){ toast('Please assign this task to a staff member'); return; }
-  try{ await api('/tasks',{method:'POST',body:JSON.stringify(body)}); toast('Task created & assigned'); document.getElementById('taskFormBox').innerHTML=''; loadTaskList(); }
-  catch(e){ toast(e.message); }
+  try{
+    await api('/tasks',{method:'POST',body:JSON.stringify(body)});
+    toast('Task created & assigned' + (body.due_date?' — due '+body.due_date:''));
+    document.getElementById('taskFormBox').innerHTML='';
+    loadTaskList();
+    if(_taskCal){ if(body.due_date) _taskCal.gotoDate(body.due_date); _taskCal.refetchEvents(); }
+  }catch(e){ toast('Could not create task: '+e.message); }
 }
 // Colour palette for calendar — vibrant + meaningful so a glance tells the story.
 const CAL_PALETTE = {
@@ -1213,6 +1218,7 @@ function calStyleFor(it,today){
   if(it.date && it.date<today) return CAL_PALETTE.overdue;
   return CAL_PALETTE[it.type] || CAL_PALETTE.OTHER;
 }
+let _taskCal=null;
 function initTaskCalendar(){
   const elc=document.getElementById('taskCalendar'); if(!elc) return;
   if(typeof FullCalendar==='undefined'){ elc.innerHTML='<div style="color:var(--muted)">Calendar library is loading — refresh the page if it stays.</div>'; return; }
@@ -1263,8 +1269,9 @@ function initTaskCalendar(){
     },
   });
   cal.render();
+  _taskCal=cal;
 }
-async function toggleTask(id,done){ try{ await api('/tasks/'+id,{method:'PATCH',body:JSON.stringify({status:done?'done':'open'})}); toast('Task updated'); loadTaskList(); }catch(e){ toast(e.message); loadTaskList(); } }
+async function toggleTask(id,done){ try{ await api('/tasks/'+id,{method:'PATCH',body:JSON.stringify({status:done?'done':'open'})}); toast('Task updated'); loadTaskList(); if(_taskCal) _taskCal.refetchEvents(); }catch(e){ toast(e.message); loadTaskList(); } }
 async function newEvent(){
   const box=document.getElementById('taskFormBox'); if(!box) return;
   if(!taskClients.length){ try{ taskClients=(await api('/clients')).data; }catch(e){ taskClients=[]; } }
@@ -1291,9 +1298,14 @@ async function createEvent(){
   const start_at=(!allDay && time)?`${date} ${time}:00`:`${date} 09:00:00`;
   const body={ title, type:val('ne_type')||'event', color:val('ne_color')||'#2c6fb3',
     start_at, all_day:allDay, client_id:val('ne_client')||null };
-  try{ await api('/events',{method:'POST',body:JSON.stringify(body)}); toast('Event added');
-    document.getElementById('taskFormBox').innerHTML=''; renderTasks();
-  }catch(e){ toast(e.message); }
+  try{
+    await api('/events',{method:'POST',body:JSON.stringify(body)});
+    toast('Event added — '+date);
+    document.getElementById('taskFormBox').innerHTML='';
+    // Jump the calendar to the new event's month so the user sees it immediately
+    if(_taskCal){ _taskCal.gotoDate(date); _taskCal.refetchEvents(); }
+    else renderTasks();
+  }catch(e){ toast('Could not add event: '+e.message); }
 }
 
 /* ---------------- Documents ---------------- */
