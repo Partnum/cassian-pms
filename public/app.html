@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cassian &amp; Associates — Management System</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231E3A5F'/%3E%3Ctext x='32' y='44' font-family='Segoe UI,Arial,sans-serif' font-size='40' font-weight='800' fill='%23C8A24B' text-anchor='middle'%3EC%3C/text%3E%3C/svg%3E">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
 <style>
@@ -46,7 +47,18 @@
   .kpi{padding:16px}.kpi .v{font-size:25px;font-weight:800}.kpi .l{color:var(--muted);font-size:12px;margin-top:3px}.kpi .ic{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center}
   table{width:100%;border-collapse:collapse}th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:10px 14px;border-bottom:1px solid var(--border);background:var(--bg)}
   td{padding:11px 14px;border-bottom:1px solid var(--border);font-size:13px}tbody tr:hover{background:var(--bg)}
-  .content thead th{position:sticky;top:60px;z-index:1}
+  .content thead th{position:sticky;top:calc(60px + var(--tabs-h,0px));z-index:1}
+  /* In-app tab strip (browser-style switching between open clients) */
+  :root{--tabs-h:0px}
+  .tab-strip{position:sticky;top:60px;z-index:18;background:linear-gradient(180deg,var(--card),#eef2f7);border-bottom:1px solid var(--border);display:flex;gap:4px;padding:6px 14px 0;overflow-x:auto;overflow-y:hidden;white-space:nowrap;scrollbar-width:thin}
+  .tab-strip::-webkit-scrollbar{height:4px}.tab-strip::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+  .open-tab{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid var(--border);border-bottom:none;border-radius:7px 7px 0 0;background:#fafbfd;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;max-width:200px;min-width:120px;position:relative;top:1px;flex:0 0 auto}
+  .open-tab:hover{background:#eef2f7}
+  .open-tab.active{background:var(--card);border-color:var(--border);color:var(--navy);box-shadow:0 -2px 0 var(--gold) inset}
+  .open-tab .ot-label{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+  .open-tab .ot-x{width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted)}
+  .open-tab .ot-x:hover{background:rgba(0,0,0,0.08);color:var(--red)}
+  .open-tab .cl-logo{width:18px;height:18px;font-size:9px;margin:0}
   /* FullCalendar polish — additive */
   .fc .fc-toolbar-title{font-size:18px;font-weight:700;color:var(--navy);letter-spacing:.2px}
   .fc .fc-button{background:var(--navy)!important;border-color:var(--navy)!important;color:#fff!important;font-weight:600;padding:6px 12px;border-radius:7px;text-transform:capitalize;box-shadow:none}
@@ -144,6 +156,7 @@
         <button class="btn" onclick="logout()">Sign out</button>
       </div>
     </header>
+    <div id="tabStrip" class="tab-strip" style="display:none"></div>
     <div id="notifPanel" style="position:fixed;top:66px;right:18px;width:340px;max-height:480px;overflow:auto;background:var(--card);border:1px solid var(--border);border-radius:11px;box-shadow:var(--shadow);z-index:25;display:none">
       <div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center"><b style="font-size:13px">Notifications</b><a href="#" id="notifReadAll" style="font-size:12px;color:var(--navy)">Mark all read</a></div>
       <div id="notifList" style="padding:4px 0">Loading…</div>
@@ -302,15 +315,52 @@ tickClock(); setInterval(tickClock,1000);
 
 /* ---------------- navigation ---------------- */
 const renderers={dashboard:renderDashboard,clients:renderClients,workflow:renderWorkflow,tasks:renderTasks,documents:renderDocuments,tax:renderTax,accounting:renderAccounting,staff:renderStaff,billing:renderBilling,timesheets:renderTimesheets,settings:renderSettings,management:renderManagement,activity:renderActivity,ai:renderAI,airisk:renderAIRisk,aianalytics:renderAIAnalytics,airecs:renderAIRecs};
+const PAGE_LABELS={dashboard:'Dashboard',clients:'Clients',workflow:'Audit Workflow',tasks:'Tasks & Calendar',documents:'Documents',tax:'Tax Compliance',accounting:'Accounting',staff:'Staff',billing:'Billing',timesheets:'Timesheets',settings:'Settings',management:'Management',activity:'Activity Log',ai:'AI Assistant',airisk:'AI Risk',aianalytics:'AI Analytics',airecs:'AI Recommendations'};
+function setBrowserTitle(label){ document.title = (label?label+' · ':'') + 'Cassian PMS'; }
 function go(page){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.page===page));
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   document.getElementById('sidebar').classList.remove('open');
   location.hash=page;
+  setBrowserTitle(PAGE_LABELS[page]||'');
+  setActiveTab(null);  // navigating to a top-level page deselects any client tab
   (renderers[page]||(()=>{}))();
 }
 document.querySelectorAll('.nav-item').forEach(n=>n.onclick=()=>go(n.dataset.page));
+
+/* ---------------- In-app open-client tab strip ---------------- */
+const TABS_KEY='cassian_open_client_tabs_v1';
+let _openTabs=[]; let _activeTabId=null;
+try{ _openTabs=JSON.parse(localStorage.getItem(TABS_KEY)||'[]'); }catch(e){ _openTabs=[]; }
+function saveTabs(){ try{ localStorage.setItem(TABS_KEY, JSON.stringify(_openTabs.slice(-12))); }catch(e){} }
+function renderTabStrip(){
+  const strip=document.getElementById('tabStrip'); if(!strip) return;
+  if(!_openTabs.length){ strip.style.display='none'; document.documentElement.style.setProperty('--tabs-h','0px'); return; }
+  strip.style.display='flex';
+  document.documentElement.style.setProperty('--tabs-h','38px');
+  strip.innerHTML=_openTabs.map(t=>`<div class="open-tab ${_activeTabId===t.id?'active':''}" onclick="reopenTab('${t.id}')" title="${esc(t.name)}">
+      <span class="cl-logo" style="background:${lg(t.name)}">${initials(t.name)}</span>
+      <span class="ot-label">${esc(t.name)}</span>
+      <span class="ot-x" onclick="closeTab(event,'${t.id}')">&times;</span>
+    </div>`).join('');
+}
+function addClientTab(id,name){
+  const i=_openTabs.findIndex(t=>t.id===id);
+  if(i>=0){ _openTabs[i].name=name; } else { _openTabs.push({id,name}); }
+  if(_openTabs.length>12) _openTabs=_openTabs.slice(-12);
+  _activeTabId=id; saveTabs(); renderTabStrip();
+}
+function setActiveTab(id){ _activeTabId=id; renderTabStrip(); }
+function closeTab(ev,id){
+  if(ev){ ev.stopPropagation(); ev.preventDefault(); }
+  _openTabs=_openTabs.filter(t=>t.id!==id);
+  if(_activeTabId===id) _activeTabId=null;
+  saveTabs(); renderTabStrip();
+  if(_activeTabId===null){ closeClientDetail(); setBrowserTitle(PAGE_LABELS[(location.hash||'#dashboard').slice(1)]||''); }
+}
+function reopenTab(id){ viewClient(id); }
+renderTabStrip();
 
 /* ---------------- Staff / Users ---------------- */
 const STAFF_ROLES=['Admin','Partner','Manager','Senior Auditor','Accountant','Tax Consultant','Staff'];
@@ -867,6 +917,8 @@ async function viewClient(id){
     document.getElementById('cd_tabs').innerHTML=['general','audit','tax','accounting'].map(a=>`<span class="pill ${a===CD.area?'active':''}" data-a="${a}" onclick="cdGo('${a}')">${a[0].toUpperCase()+a.slice(1)}</span>`).join('');
     const eb=document.getElementById('cd_editBtn'); if(eb) eb.style.display=(USER&&['Admin','Partner','Manager'].includes(USER.role))?'inline-flex':'none';
     document.getElementById('clientDetail').classList.add('open');
+    addClientTab(c.id, c.name);
+    setBrowserTitle(c.name);
     cdLoad(); cdLoadTeam();
   }catch(e){ toast(e.message); }
 }
@@ -896,7 +948,11 @@ async function cdSave(){
   try{ await api('/clients/'+id,{method:'PATCH',body:JSON.stringify(body)}); toast('Client updated'); viewClient(id); renderClients(); }
   catch(e){ toast(e.message); }
 }
-function closeClientDetail(){ document.getElementById('clientDetail').classList.remove('open'); }
+function closeClientDetail(){
+  document.getElementById('clientDetail').classList.remove('open');
+  setActiveTab(null);
+  setBrowserTitle(PAGE_LABELS[(location.hash||'#dashboard').slice(1)]||'');
+}
 function cdGo(a){ CD.area=a; document.querySelectorAll('#cd_tabs .pill').forEach(p=>p.classList.toggle('active',p.dataset.a===a)); cdLoad(); }
 async function cdLoad(){
   const box=document.getElementById('cd_comments'); box.innerHTML='Loading…';
